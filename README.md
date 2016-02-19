@@ -330,3 +330,28 @@ The content of generated file is:
 ше-сто-кри-ла́-тї-и
 }
 ```
+
+Last but not least. At any time you can examine the content of Project file by using `show` command:
+```bash
+patgen words show            
+Project file words
+    created: 2016-02-19 10:24:08.195968
+    last modified: 2016-02-19 10:56:06.679779
+    margin_left: 1
+    margin_right: 1
+    dictionary size: 12385
+    total hyphens: 28863
+    number of pattern layers: 6
+Hyphenating patternset, num patterns: 1586
+    Trained with: pattern length 2..3, selector 1:10:10
+Inhibiting patternset, num patterns: 894
+    Trained with: pattern length 2..3, selector 1:1:1
+Hyphenating patternset, num patterns: 2004
+    Trained with: pattern length 2..3, selector 1:2:1
+Inhibiting patternset, num patterns: 2094
+    Trained with: pattern length 1..5, selector 1:2:1
+Hyphenating patternset, num patterns: 844
+    Trained with: pattern length 1..5, selector 1:2:1
+Inhibiting patternset, num patterns: 151
+    Trained with: pattern length 1..5, selector 1:2:1
+```
