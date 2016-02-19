@@ -273,9 +273,9 @@ good to me (probably overfit :).
 6. Next (and last) step is to export generated patterns in TeX format:
    ```
 patgen words export words.tex       
-Created TeX patterns file words.tex
-Number of patterns: 6697
-Number of exceptions: 74
+> Created TeX patterns file words.tex
+> Number of patterns: 6697
+> Number of exceptions: 74
 ```
 
 The content of generated file is:
