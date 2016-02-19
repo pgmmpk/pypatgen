@@ -65,13 +65,13 @@ def main_show(args):
     print('\tmargin_right:', project.margin_right)
     print('\tdictionary size:', len(project.dictionary))
     print('\ttotal hyphens:', sum(count_hyphens(x)+count_missed(x) for x in project.dictionary.values()))
-    print('\tnumber of pattern layers:', len(project.patterns))
+    print('\tnumber of pattern levels:', len(project.patterns))
     
     for i, patternset in enumerate(project.patterns):
         if i & 1 == 0:
-            print('Hyphenating patternset, num patterns:', len(patternset))
+            print((i+1), 'Hyphenating patternset, num patterns:', len(patternset))
         else:
-            print('Inhibiting patternset, num patterns:', len(patternset))
+            print((i+1), 'Inhibiting patternset, num patterns:', len(patternset))
         params = project.params[i]
         print('\tTrained with: pattern length %s..%s, selector %s' % (params.min_length, params.max_length, params.selector))
 
@@ -226,8 +226,8 @@ if __name__ == '__main__':
     # "new" command
     parser_new = sub.add_parser('new', help='Creates new hyphenation pattern project from dictionary')
     parser_new.add_argument('dictionary', help='Dictionary of hyphenated words (one word per line)')
-    parser_new.add_argument('--margin_left', default=1, help='hyphenation left margin. Default is 1.')
-    parser_new.add_argument('--margin_right', default=1, help='hyphenation right margin. Default is 1.')
+    parser_new.add_argument('--margin_left', default=1, type=int, help='hyphenation left margin. Default is 1.')
+    parser_new.add_argument('--margin_right', default=1, type=int, help='hyphenation right margin. Default is 1.')
 
     # "show" command
     parser_show = sub.add_parser('show', help='Displays information about current hyphenation project')
