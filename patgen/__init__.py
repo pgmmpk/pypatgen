@@ -331,3 +331,43 @@ def compute_dictionary_errors(patterns, dictionary, *, margin_left=1, margin_rig
         true_hyphens = set(i for i,h in enumerate(hyphens) if h in (TRUE_HYPHEN, MISSED_HYPHEN))
         if prediction != true_hyphens:
             yield word, prediction
+
+def parse_patterns(texts):
+    patterns = {}
+    
+    for text in texts:
+        chunk, controls = parse_pattern(text)
+        
+        for i in range(len(chunk) + 1):
+            if controls[i] > 0:
+                c = controls[i]
+                if c not in patterns:
+                    patterns[c] = collections.defaultdict(set)
+                patterns[c][chunk].add(i)
+    
+    max_level = max(patterns.keys())
+    out = [set() for _ in range(max_level)]
+    for i, patternset in patterns.items():
+        out[i-1] = patternset
+    
+    return out
+
+def parse_pattern(text):
+    
+    out = []
+    controls = [0] * (len(text) + 1)
+    
+    seen_digit = False
+    for x in text:
+        if not seen_digit:
+            if x in '0123456789':
+                controls[len(out)] = int(x)
+                seen_digit = False
+            else:
+                out.append(x)
+                seen_digit = False
+        else:
+            out.append(x)
+            seen_digit = False
+
+    return ''.join(out), controls[:len(out)+1]
