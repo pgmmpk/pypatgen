@@ -10,7 +10,7 @@ with codecs.open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='pypatgen',
-    version='0.1.2',
+    version='0.1.3',
     description='TeX hyphenation pattern generator',
     long_description=long_description,
     url='https://github.com/pgmmpk/pypatgen',
@@ -37,8 +37,8 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'pypatgen=patgen.main',
-            'pypatgen_validate=patgen.validate'
+            'pypatgen=patgen.main:main',
+            'pypatgen_validate=patgen.validate:main'
         ],
     },
 )

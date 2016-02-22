@@ -216,7 +216,7 @@ def count_false(hyphens):
     return sum(1 if x == FALSE_HYPHEN else 0 for x in hyphens)
 
 
-if __name__ == '__main__':
+def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Generates TeX hyphenation patterns')
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     parser_new.add_argument('--margin_right', default=1, type=int, help='hyphenation right margin. Default is 1.')
 
     # "show" command
-    parser_show = sub.add_parser('show', help='Displays information about current hyphenation project')
+    parser_show = sub.add_parser('show', help='Displays information about current hyphenation project')  # @UnusedVariable
 
     # "train" command
     parser_train = sub.add_parser('train', help='Trains next level of hyphenation patterns')
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     parser_export.add_argument('output', help='Name of the TeX pattern file to create')
 
     # "show_errors" command
-    parser_show_errors = sub.add_parser('show_errors', help='Shows all errors')
+    parser_show_errors = sub.add_parser('show_errors', help='Shows all errors')  # @UnusedVariable
 
     args = parser.parse_args()
     if args.cmd == 'new':
@@ -260,3 +260,5 @@ if __name__ == '__main__':
     else:
         parser.error('Command required')
 
+if __name__ == '__main__':
+    main()
