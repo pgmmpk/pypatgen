@@ -75,7 +75,7 @@ wget https://raw.githubusercontent.com/typiconman/Perl-Lingua-CU/master/lib/Ling
 
 2. Create project. Lets call it "words":
    ```bash
-patgen words new words.txt --margin_left 1 --margin_right 1
+pypatgen words new words.txt --margin_left 1 --margin_right 1
 > Created project words from dictionary words.txt
 > Project file words
 >     created: 2016-02-19 10:14:00.656172
@@ -94,7 +94,7 @@ after two-letter prefix.
 try patterns of length 2 and 3 only. And lets use fairly concervative selector "1:10:50". Remember, that this step does not
 update the project (unless we use `--commit` switch). So we can try different values and find the best.
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:50
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:50
 > Training hyphenation patterns (level=1)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -108,7 +108,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10
 
 4. Lets relax a bit selection criteria to get better coverage (this will likely increase the number of false hits) 
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10
 > Training hyphenation patterns (level=1)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -120,7 +120,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10
 ```
    Now we covered 92% of hyphens and introduced 3% of false hyphenations. Lets commit - this is pretty good for the first layer!
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10 --commit
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10 --commit
 > Training hyphenation patterns (level=1)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -135,7 +135,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10
 5. Now lets train the next level of patterns. Since this is the second (i.e. even) level, this will be
 inhibiting patterns. We want to supress those false positives. Lets try these parameters:
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10 
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:10:10 
 > Training inhibiting patterns (level=2)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -149,7 +149,7 @@ Hmm, we almost halved the number of false hits. But this is not good enough. We 
 about introducing false hyphenations. It is better to miss few true hyphens than to introduce an invalid one. So lets
 relax selector drastically:
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:1  
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:1  
 > Training inhibiting patterns (level=2)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -162,7 +162,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:
    Now it looks pretty good. We have only 93 false positives, without affecting true predictions too much. Lets commit!
 
    ```
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:1 --commit
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:1 --commit
 > Training inhibiting patterns (level=2)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -176,7 +176,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:1:
 
    Lets find more hyphens:
    ```
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:2:1 
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:2:1 
 Training hyphenation patterns (level=3)
     min_pattern_length: 2
     max_pattern_length: 3
@@ -188,7 +188,7 @@ False: 439 (1.521%)
 ```
    We are missing only 1.3% of true hyphens. This sounds pretty good! Lets commit.
    ```bash
-patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:2:1 --commit
+pypatgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:2:1 --commit
 > Training hyphenation patterns (level=3)
 >     min_pattern_length: 2
 >     max_pattern_length: 3
@@ -202,7 +202,7 @@ patgen words train --min_pattern_length 2 --max_pattern_length 3 --selector 1:2:
 
    Now its time to clean up false hyphens. Lets allow for the longer patterns and use very relaxing selector:
    ```
-patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 
+pypatgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 
 > Training inhibiting patterns (level=4)
 >     min_pattern_length: 1
 >     max_pattern_length: 5
@@ -218,7 +218,7 @@ patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:
 
    Wow! Only 34 false hyphens left. I'll take this - commit!
    ```bash
-patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
+pypatgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
 > Training inhibiting patterns (level=4)
 >     min_pattern_length: 1
 >     max_pattern_length: 5
@@ -235,7 +235,7 @@ patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:
 
    Now patterns look pretty good. But lets add few more layers on top of this:
    ```
-patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
+pypatgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
 Training hyphenation patterns (level=5)
     min_pattern_length: 1
     max_pattern_length: 5
@@ -252,7 +252,7 @@ False: 73 (0.253%)
 
    And inhibiting level:
    ```
-patgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
+pypatgen words train --min_pattern_length 1 --max_pattern_length 5 --selector 1:2:1 --commit
 Training inhibiting patterns (level=6)
     min_pattern_length: 1
     max_pattern_length: 5
@@ -272,7 +272,7 @@ good to me (probably overfit :).
 
 6. Next (and last) step is to export generated patterns in TeX format:
    ```
-patgen words export words.tex       
+pypatgen words export words.tex       
 > Created TeX patterns file words.tex
 > Number of patterns: 6697
 > Number of exceptions: 74
@@ -333,7 +333,7 @@ The content of generated file is:
 
 Last but not least. At any time you can examine the content of Project file by using `show` command:
 ```bash
-patgen words show            
+pypatgen words show            
 Project file words
     created: 2016-02-19 10:24:08.195968
     last modified: 2016-02-19 10:56:06.679779
