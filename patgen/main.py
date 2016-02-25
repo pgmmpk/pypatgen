@@ -11,7 +11,9 @@ import datetime
 from patgen import load_dictionary, save_project, load_project, parse_selector,\
     stagger_range, generate_pattern_statistics, evaluate_pattern_set, EMPTYSET,\
     compute_dictionary_errors, format_dictionary_word,\
-    TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN, NOT_A_HYPHEN
+    TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN, NOT_A_HYPHEN, apply_patterns,\
+    format_hyphenation
+import sys
 
 
 def main_new(args):
@@ -208,6 +210,31 @@ def main_show_errors(args):
     return 0
 
 
+def main_hyphenate(args):
+    
+    project = load_project(args.project)
+    
+    maxchunk = 0
+    for patternset in project.patterns:
+        if patternset:
+            maxchunk = max(maxchunk, max(len(x) for x in patternset.keys()))
+
+    with codecs.open(args.input or sys.stdin.fileno(), 'r', 'utf-8') as f:
+        with codecs.open(args.output or sys.stdout.fileno(), 'w', 'utf-8') as out:
+
+            for word in f:
+                word = word.strip()
+                if not word:
+                    continue
+    
+                prediction = apply_patterns(project.patterns, word, maxchunk, 
+                                            margin_left=project.margin_left, 
+                                            margin_right=project.margin_right)
+                
+                s = format_hyphenation(word, prediction)
+                out.write(s + '\n')
+
+
 def count_hyphens(hyphens):
     return sum(1 if x == TRUE_HYPHEN else 0 for x in hyphens)
 def count_missed(hyphens):
@@ -246,6 +273,11 @@ def main():
     # "show_errors" command
     parser_show_errors = sub.add_parser('show_errors', help='Shows all errors')  # @UnusedVariable
 
+    # "hyphenate" command
+    parser_hyphenate = sub.add_parser('hyphenate', help='Hyphenates a list of words')
+    parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
+    parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
+
     args = parser.parse_args()
     if args.cmd == 'new':
         parser.exit(main_new(args))
@@ -257,6 +289,8 @@ def main():
         parser.exit(main_export(args))
     elif args.cmd == 'show_errors':
         parser.exit(main_show_errors(args))
+    elif args.cmd == 'hyphenate':
+        parser.exit(main_hyphenate(args))
     else:
         parser.error('Command required')
 
