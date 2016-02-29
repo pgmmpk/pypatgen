@@ -75,11 +75,11 @@ wget https://raw.githubusercontent.com/slavonic/cu-tex/master/data/words.txt
 
 2. Create project. Lets call it "words":
    ```bash
-pypatgen words1 new  words.txt
+pypatgen words new  words.txt
 > Automatically detecting hyphenation margins (from dictionary)
-> Created project words1 from dictionary words.txt.1
+> Created project words from dictionary words.txt
 > 
-> Project file words1
+> Project file words
 >     created: 2016-02-28 18:09:40.801447
 >     last modified: 2016-02-28 18:09:40.801478
 >     margin_left: 1
@@ -173,7 +173,7 @@ pypatgen words train -r 1,3 -s 1:2:5 --commit
 > ...Committed!
 ```
 
-   Lets find more hyphens:
+6. Lets find more hyphens:
    ```
 pypatgen words train -r 1,3 -s 1:2:5 
 > Training hyphenation patterns (level=3)
@@ -200,7 +200,7 @@ pypatgen words train -r 1,4 -s 1:2:5 -c
 > ...Committed!
 ```
 
-   Now its time to clean up false hyphens. Lets allow for the longer patterns and use very relaxing selector. After some trial
+7. Now its time to clean up false hyphens. Lets allow for the longer patterns and use very relaxing selector. After some trial
    and error, commit these parameters:
    ```bash
 pypatgen words train -r 1,4 -s 1:1:2 -c
@@ -216,7 +216,7 @@ pypatgen words train -r 1,4 -s 1:1:2 -c
 > ...Committed!
 ```
 
-   Still have about 250 of false predictions and about 1000 of missed hyphens. Lets train another two layers:
+8. Still have about 250 of false predictions and about 1000 of missed hyphens. Lets train another two layers:
 ```bash
 pypatgen words train -r 1,5 -s 1:1:2 -c
 > Training hyphenation patterns (level=5)
@@ -265,7 +265,7 @@ pypatgen words train -r 1,6 -s 1:1:1 -c
 > ...Committed!
 ```
    and
-```bash
+   ```bash
 pypatgen words train -r 1,6 -s 1:1:1 -c
 > Training inhibiting patterns (level=8)
 >     range of pattern lengths: 1..6
@@ -280,7 +280,6 @@ pypatgen words train -r 1,6 -s 1:1:1 -c
 > False (weighted): 27 (0.064%)
 > ...Committed!
 ```
-
    We are done now with training. We missed 36 hyphens and we introduced only 27 false hyphens. This sounds pretty
 good to me (probably overfit :).
 
@@ -336,7 +335,7 @@ The content of generated file is:
 Last but not least. At any time you can examine the content of Project file by using `show` command:
 ```bash
 pypatgen words show
-> Project file words1
+> Project file words
 >     created: 2016-02-28 18:09:40.801447
 >     last modified: 2016-02-28 19:05:56.198309
 >     margin_left: 1
