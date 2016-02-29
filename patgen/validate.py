@@ -3,6 +3,8 @@ Created on Feb 19, 2016
 
 @author: mike
 '''
+from __future__ import print_function
+
 import codecs
 import re
 import argparse

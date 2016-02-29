@@ -3,10 +3,11 @@ Created on Feb 16, 2016
 
 @author: mike
 '''
+from __future__ import print_function
+
 import os
 import codecs
 import collections
-from types import SimpleNamespace
 import datetime
 from patgen import load_dictionary, save_project, load_project, parse_selector,\
     stagger_range, generate_pattern_statistics, evaluate_pattern_set, EMPTYSET,\
@@ -15,6 +16,12 @@ from patgen import load_dictionary, save_project, load_project, parse_selector,\
     format_hyphenation, parse_margins
 import sys
 
+
+class SimpleNamespace:
+    
+    def __init__(self, **kav):
+        for name, value in kav.items():
+            setattr(self, name, value)
 
 def main_new(args):
     

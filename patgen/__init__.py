@@ -3,6 +3,8 @@ Created on Feb 18, 2016
 
 @author: mike
 '''
+from __future__ import print_function
+
 import collections
 import codecs
 import pickle
@@ -18,7 +20,7 @@ TRUE_HYPHEN   = '-'
 NOT_A_HYPHEN  = ' '
 
 
-def chunker(word, *, chunklen, hyphen_position, margin_left=1, margin_right=1):
+def chunker(word, chunklen, hyphen_position, margin_left=1, margin_right=1):
     '''
     Takes word "word" and generates all chunks of the given length "chunklen" with
     hyphen position "hyphen_position".
@@ -72,7 +74,7 @@ def parse_dictionary_word(word):
 
         return ''.join(text).lower(), hyphens, weights
 
-def load_dictionary(filename, *, ignore_weights=False):
+def load_dictionary(filename, ignore_weights=False):
 
     dictionary = collections.OrderedDict()
     weights    = collections.OrderedDict()
@@ -190,7 +192,7 @@ def format_dictionary_word(text, true_hyphens, predicted_hyphens=None):
     return ''.join(out)
 
 
-def generate_pattern_statistics(dictionary, weights, inhibiting, patt_len, hyphen_position, *, margin_left=1, margin_right=1):
+def generate_pattern_statistics(dictionary, weights, inhibiting, patt_len, hyphen_position, margin_left=1, margin_right=1):
     '''
     Takes a dictionary of word hyphenations and
     1. Finds all possible patterns of a given length and given hyphen position, and
@@ -220,7 +222,7 @@ def generate_pattern_statistics(dictionary, weights, inhibiting, patt_len, hyphe
     return [(ch, good[ch], bad[ch]) for ch in sorted(set(good.keys()) | set(bad.keys()))]
 
 
-def evaluate_pattern_set(patternset, inhibiting, dictionary, *, margin_left=1, margin_right=1):
+def evaluate_pattern_set(patternset, inhibiting, dictionary, margin_left=1, margin_right=1):
     
     maxchunk = max(len(x) for x in patternset.keys()) if patternset else 0
 
@@ -243,7 +245,7 @@ def evaluate_pattern_set(patternset, inhibiting, dictionary, *, margin_left=1, m
                         hyphens[i] = NOT_A_HYPHEN
 
 
-def apply_pattern_set(patternset, word, maxchunk, *, margin_left=1, margin_right=1):
+def apply_pattern_set(patternset, word, maxchunk, margin_left=1, margin_right=1):
     '''
     Applies a single pattern set to the word
     
@@ -266,7 +268,7 @@ def apply_pattern_set(patternset, word, maxchunk, *, margin_left=1, margin_right
     return prediction
 
 
-def apply_patterns(patterns, word, maxchunk, *, margin_left=1, margin_right=1):
+def apply_patterns(patterns, word, maxchunk, margin_left=1, margin_right=1):
     '''
     Applies patterns to a word.
     
@@ -290,7 +292,7 @@ def apply_patterns(patterns, word, maxchunk, *, margin_left=1, margin_right=1):
     return hyphens
 
 
-def evaluate_dictionary(patterns, dictionary, weights, *, margin_left=1, margin_right=1):
+def evaluate_dictionary(patterns, dictionary, weights, margin_left=1, margin_right=1):
     '''
     Evaluates the performance of patterns on a dictionary.
     
@@ -341,7 +343,7 @@ def stagger_range(start, end):
             right += 1
 
 
-def compute_dictionary_errors(patterns, dictionary, *, margin_left=1, margin_right=1):
+def compute_dictionary_errors(patterns, dictionary, margin_left=1, margin_right=1):
     maxchunk = 0
     for patternset in patterns:
         if patternset:
