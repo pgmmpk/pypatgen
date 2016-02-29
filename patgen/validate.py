@@ -20,6 +20,10 @@ TEMPLATE = r'''
 
 $BODY$
 
+\begin{checkhyphens}
+$CHECKHYPHENS$
+\end{checkhyphens}
+
 \end{document}
 '''
 
@@ -30,9 +34,10 @@ def main_generate(args):
     
     body= '\n'.join('\\showhyphens{%s}' % x for x in words)
     
-    body += '\n\\begin{checkhyphens}\n' + '\n'.join(words) + '\\end{checkhyphens}'
-    
+    checkhyphens = '\n'.join(words)
+
     text = re.sub(r'\$BODY\$', body, TEMPLATE)
+    text = re.sub(r'\$CHECKHYPHENS\$', checkhyphens, text)
     
     with codecs.open(args.output, 'w', 'utf-8') as f:
         f.write(text)

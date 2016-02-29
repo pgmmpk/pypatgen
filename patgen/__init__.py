@@ -17,6 +17,7 @@ FALSE_HYPHEN  = '*'
 TRUE_HYPHEN   = '-'
 NOT_A_HYPHEN  = ' '
 
+
 def chunker(word, *, chunklen, hyphen_position, margin_left=1, margin_right=1):
     '''
     Takes word "word" and generates all chunks of the given length "chunklen" with
@@ -53,23 +54,28 @@ def chunker(word, *, chunklen, hyphen_position, margin_left=1, margin_right=1):
 def parse_dictionary_word(word):
         text = []
         hyphens = [NOT_A_HYPHEN] * (len(word) + 1)
-        
-        special_seen = False
+        weights = [None] * (len(word) + 1)
+
         for c in word:
-            if not special_seen:
-                if c in (TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN):
-                    hyphens[len(text)] = c
-                    special_seen = True
-                    continue
+            if c in (TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN):
+                hyphens[len(text)] = c
+            elif c in '0123456789':
+                weights[len(text)] = int(c)
+            else:
+                text.append(c)
 
-            special_seen = False
-            text.append(c)
+        word_weight = 1 if weights[0] is None else weights[0]
+        weights = [word_weight if x is None else x for x in weights]
+        
+        hyphens = hyphens[:len(text)+1]
+        weights = weights[:len(text)+1]
 
-        return ''.join(text).lower(), hyphens
+        return ''.join(text).lower(), hyphens, weights
 
-def load_dictionary(filename):
+def load_dictionary(filename, *, ignore_weights=False):
 
     dictionary = collections.OrderedDict()
+    weights    = collections.OrderedDict()
     with codecs.open(filename, 'r', 'utf-8') as f:
         for line in f:
             line = line.strip()
@@ -78,10 +84,13 @@ def load_dictionary(filename):
             if line.startswith('#'):  # comment line
                 continue
             
-            text, hyphens = parse_dictionary_word(line)
+            text, hyphens, weight = parse_dictionary_word(line)
             dictionary[text] = hyphens
+            if ignore_weights:
+                weight = [1] * len(weight)
+            weights[text] = weight
     
-    return dictionary
+    return dictionary, weights
 
 
 def format_hyphenation(word, hyphens, true_hyphens=None):
@@ -151,6 +160,15 @@ def parse_selector(selector):
     return tuple(float(x) for x in parts)
 
 
+def parse_margins(margins):
+    parts = margins.split(',')
+
+    if len(parts) != 2:
+        raise ValueError('margins format error: expect two numbers delimitered with commas, e.g. "1,1". Got: %s' % margins)
+    
+    return tuple(int(x) for x in parts)
+
+
 def format_dictionary_word(text, true_hyphens, predicted_hyphens=None):
     if predicted_hyphens is None:
         predicted_hyphens = set(i for i in range(len(true_hyphens)) if true_hyphens[i] in (TRUE_HYPHEN, MISSED_HYPHEN))
@@ -172,7 +190,7 @@ def format_dictionary_word(text, true_hyphens, predicted_hyphens=None):
     return ''.join(out)
 
 
-def generate_pattern_statistics(dictionary, inhibiting, patt_len, hyphen_position, *, margin_left=1, margin_right=1):
+def generate_pattern_statistics(dictionary, weights, inhibiting, patt_len, hyphen_position, *, margin_left=1, margin_right=1):
     '''
     Takes a dictionary of word hyphenations and
     1. Finds all possible patterns of a given length and given hyphen position, and
@@ -183,19 +201,21 @@ def generate_pattern_statistics(dictionary, inhibiting, patt_len, hyphen_positio
     bad  = collections.defaultdict(int)
 
     for word, hyphens in dictionary.items():
+        weight = weights[word]
 
         for start, ch in chunker(word, chunklen=patt_len, hyphen_position=hyphen_position, margin_left=margin_left, margin_right=margin_right):
             code = hyphens[start + hyphen_position - 1]
+            w    = weight[start + hyphen_position - 1]
             if not inhibiting:
                 if code == MISSED_HYPHEN:
-                    good[ch] += 1
+                    good[ch] += w
                 elif code == NOT_A_HYPHEN:
-                    bad[ch] += 1
+                    bad[ch] += w
             else:
                 if code == FALSE_HYPHEN:
-                    good[ch] += 1
+                    good[ch] += w
                 elif code == TRUE_HYPHEN:
-                    bad[ch] += 1
+                    bad[ch] += w
 
     return [(ch, good[ch], bad[ch]) for ch in sorted(set(good.keys()) | set(bad.keys()))]
 
@@ -221,7 +241,7 @@ def evaluate_pattern_set(patternset, inhibiting, dictionary, *, margin_left=1, m
                         hyphens[i] = MISSED_HYPHEN
                     elif hyphens[i] == FALSE_HYPHEN:
                         hyphens[i] = NOT_A_HYPHEN
-            
+
 
 def apply_pattern_set(patternset, word, maxchunk, *, margin_left=1, margin_right=1):
     '''
@@ -270,7 +290,7 @@ def apply_patterns(patterns, word, maxchunk, *, margin_left=1, margin_right=1):
     return hyphens
 
 
-def evaluate_dictionary(patterns, dictionary, *, margin_left=1, margin_right=1):
+def evaluate_dictionary(patterns, dictionary, weights, *, margin_left=1, margin_right=1):
     '''
     Evaluates the performance of patterns on a dictionary.
     
@@ -289,15 +309,17 @@ def evaluate_dictionary(patterns, dictionary, *, margin_left=1, margin_right=1):
     for word, hyphens in dictionary.items():
         
         prediction = apply_patterns(patterns, word, maxchunk, margin_left=margin_left, margin_right=margin_right)
+        weight = weights[word]
         
         for i, code in enumerate(hyphens):
+            w = weight[i]
             if code in (TRUE_HYPHEN, MISSED_HYPHEN):
-                total += 1
+                total += w
                 if i not in prediction:
-                    missed += 1
+                    missed += w
             else:
                 if i in prediction:
-                    false += 1
+                    false += w
     
     return total, missed, false
 
@@ -332,6 +354,7 @@ def compute_dictionary_errors(patterns, dictionary, *, margin_left=1, margin_rig
         if prediction != true_hyphens:
             yield word, prediction
 
+
 def parse_patterns(texts):
     patterns = {}
     
@@ -351,6 +374,7 @@ def parse_patterns(texts):
         out[i-1] = patternset
     
     return out
+
 
 def parse_pattern(text):
     

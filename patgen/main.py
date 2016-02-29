@@ -12,7 +12,7 @@ from patgen import load_dictionary, save_project, load_project, parse_selector,\
     stagger_range, generate_pattern_statistics, evaluate_pattern_set, EMPTYSET,\
     compute_dictionary_errors, format_dictionary_word,\
     TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN, NOT_A_HYPHEN, apply_patterns,\
-    format_hyphenation
+    format_hyphenation, parse_margins
 import sys
 
 
@@ -26,7 +26,7 @@ def main_new(args):
         print('Dictionary file not found', args.dictionary)
         return -1
     
-    dictionary = load_dictionary(args.dictionary)
+    dictionary, weights = load_dictionary(args.dictionary, ignore_weights=args.ignore_weights)
     for hyphen in dictionary.values():
         for i in range(len(hyphen)):
             if hyphen[i] == TRUE_HYPHEN:
@@ -34,14 +34,35 @@ def main_new(args):
             elif hyphen[i] == FALSE_HYPHEN:
                 hyphen[i] = NOT_A_HYPHEN
 
+    if args.margins is None:
+        print('Automatically detecting hyphenation margins (from dictionary)')
+        margin_left = 1000
+        margin_right = 1000
+        for hyphen in dictionary.values():
+            for i in range(len(hyphen)):
+                if hyphen[i] != NOT_A_HYPHEN:
+                    margin_left = min(margin_left, i)
+                    margin_right = min(margin_right, len(hyphen) - 1 - i)
+    else:
+        margin_left, margin_right = parse_margins(args.margins)
+
+    total_hyphens = 0
+    for word, hyphens in dictionary.items():
+        weight = weights[word]
+        total_hyphens += count_hyphens(hyphens, weight)
+        total_hyphens += count_missed(hyphens, weight)
+    
     project = SimpleNamespace(
             dictionary=dictionary,
-            margin_left = args.margin_left,
-            margin_right = args.margin_right,
-            patterns = [],
-            params = [],
-            created = datetime.datetime.now(),
-            modified = datetime.datetime.now()
+            weights=weights,
+            margin_left=margin_left,
+            margin_right=margin_right,
+            ignore_weights=args.ignore_weights,
+            total_hyphens=total_hyphens,
+            patterns=[],
+            params=[],
+            created=datetime.datetime.now(),
+            modified=datetime.datetime.now()
         )
     
     save_project(project, args.project)
@@ -66,16 +87,18 @@ def main_show(args):
     print('\tmargin_left:', project.margin_left)
     print('\tmargin_right:', project.margin_right)
     print('\tdictionary size:', len(project.dictionary))
-    print('\ttotal hyphens:', sum(count_hyphens(x)+count_missed(x) for x in project.dictionary.values()))
+    if project.ignore_weights:
+        print('\tdictionary weights were ignored (-i flag active)')
+    print('\ttotal hyphens: (weighted)', project.total_hyphens)
     print('\tnumber of pattern levels:', len(project.patterns))
     
     for i, patternset in enumerate(project.patterns):
         if i & 1 == 0:
-            print((i+1), 'Hyphenating patternset, num patterns:', len(patternset))
+            print((i+1), 'HYPHENATING patternset, num patterns:', len(patternset))
         else:
-            print((i+1), 'Inhibiting patternset, num patterns:', len(patternset))
+            print((i+1), 'INHIBITING patternset, num patterns:', len(patternset))
         params = project.params[i]
-        print('\tTrained with: pattern length %s..%s, selector %s' % (params.min_length, params.max_length, params.selector))
+        print('\tTrained with: range %s, selector %s' % (params.range, params.selector))
 
     return 0
 
@@ -92,17 +115,19 @@ def main_train(args):
         inhibiting = True
     else:
         print('Training hyphenation patterns (level=%s)' % (len(project.patterns)+1))
+    
+    min_pattern_length, max_pattern_length = parse_margins(args.range)
 
-    print('\tmin_pattern_length:', args.min_pattern_length)
-    print('\tmax_pattern_length:', args.max_pattern_length)
+    print('\trange of pattern lengths: %s..%s' % (min_pattern_length, max_pattern_length))
     print('\tselector:', args.selector)
     
-    total_hyphens = sum(count_hyphens(x)+count_missed(x) for x in project.dictionary.values())
+    total_hyphens = project.total_hyphens
 
     patternset = collections.defaultdict(set)
-    for pattlen in stagger_range(args.min_pattern_length, args.max_pattern_length+1):
+    for pattlen in stagger_range(min_pattern_length, max_pattern_length+1):
         for position in range(0, pattlen+1):
             for ch, num_good, num_bad in generate_pattern_statistics(project.dictionary,
+                                                                    project.weights,
                                                                     inhibiting, 
                                                                     pattlen, 
                                                                     position, 
@@ -115,22 +140,21 @@ def main_train(args):
 
     # evaluate
     evaluate_pattern_set(patternset, inhibiting, project.dictionary, margin_left=project.margin_left, margin_right=project.margin_right)
-    missed = sum(count_missed(x) for x in project.dictionary.values())
-    false  = sum(count_false(x) for x in project.dictionary.values())
 
-    print('Missed:', missed, '(%4.3f%%)' % (missed * 100 / (total_hyphens + 0.000001)))
-    print('False:', false,   '(%4.3f%%)' % (false * 100 / (total_hyphens + 0.000001)))
-    
-    ## was here to cross-check incremental computation of stats above
-    #from patgen import evaluate_dictionary
-    #total_hyphens, missed, false = evaluate_dictionary(project.patterns + [patternset], project.dictionary)
-    #print('*Missed:', missed, '(%4.3f%%)' % (missed * 100 / (total_hyphens + 0.000001)))
-    #print('*False:', false,   '(%4.3f%%)' % (false * 100 / (total_hyphens + 0.000001)))
+    missed = 0
+    false = 0
+    for word, hyphens in project.dictionary.items():
+        weight = project.weights[word]
+        
+        missed += count_missed(hyphens, weight)
+        false += count_false(hyphens, weight)
+
+    print('Missed (weighted):', missed, '(%4.3f%%)' % (missed * 100 / (total_hyphens + 0.000001)))
+    print('False (weighted):', false,   '(%4.3f%%)' % (false * 100 / (total_hyphens + 0.000001)))
 
     if args.commit:
         project.params.append(SimpleNamespace(
-            min_length = args.min_pattern_length,
-            max_length = args.max_pattern_length,
+            range = args.range,
             selector   = args.selector
         ))
         project.patterns.append(patternset)
@@ -235,12 +259,12 @@ def main_hyphenate(args):
                 out.write(s + '\n')
 
 
-def count_hyphens(hyphens):
-    return sum(1 if x == TRUE_HYPHEN else 0 for x in hyphens)
-def count_missed(hyphens):
-    return sum(1 if x == MISSED_HYPHEN else 0 for x in hyphens)
-def count_false(hyphens):
-    return sum(1 if x == FALSE_HYPHEN else 0 for x in hyphens)
+def count_hyphens(hyphens, weights):
+    return sum(weights[i] if x == TRUE_HYPHEN else 0 for i,x in enumerate(hyphens))
+def count_missed(hyphens, weights):
+    return sum(weights[i] if x == MISSED_HYPHEN else 0 for i,x in enumerate(hyphens))
+def count_false(hyphens, weights):
+    return sum(weights[i] if x == FALSE_HYPHEN else 0 for i,x in enumerate(hyphens))
 
 
 def main():
@@ -253,18 +277,17 @@ def main():
     # "new" command
     parser_new = sub.add_parser('new', help='Creates new hyphenation pattern project from dictionary')
     parser_new.add_argument('dictionary', help='Dictionary of hyphenated words (one word per line)')
-    parser_new.add_argument('--margin_left', default=1, type=int, help='hyphenation left margin. Default is 1.')
-    parser_new.add_argument('--margin_right', default=1, type=int, help='hyphenation right margin. Default is 1.')
-
+    parser_new.add_argument('-m', '--margins', help='Hyphenation margins. If not set, will  be computed from the dictionary')
+    parser_new.add_argument('-i', '--ignore_weights', default=False, action='store_true', help='If set, ignores dictionary weights (not recommented)')
+    
     # "show" command
     parser_show = sub.add_parser('show', help='Displays information about current hyphenation project')  # @UnusedVariable
 
     # "train" command
     parser_train = sub.add_parser('train', help='Trains next level of hyphenation patterns')
-    parser_train.add_argument('--selector', default='1:5:10', help='triplet of numbers that control pattern selection. Format is: "good_weight:bad_weight:threshold"')
-    parser_train.add_argument('--min_pattern_length', default=1, type=int, help='minimal length of pattern. Default is 1')
-    parser_train.add_argument('--max_pattern_length', default=5, type=int, help='maximal length of pattern. Default is 5')
-    parser_train.add_argument('--commit', default=False, action='store_true', help='If set, project is modified')
+    parser_train.add_argument('-s', '--selector', default='1:5:10', help='triplet of numbers that control pattern selection. Format is: "good_weight:bad_weight:threshold"')
+    parser_train.add_argument('-r', '--range', default='1,5', help='range of patterns lengths. Default is 1,5')
+    parser_train.add_argument('-c', '--commit', default=False, action='store_true', help='If set, project is modified')
 
     # "export" command
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
@@ -293,6 +316,7 @@ def main():
         parser.exit(main_hyphenate(args))
     else:
         parser.error('Command required')
+
 
 if __name__ == '__main__':
     main()
