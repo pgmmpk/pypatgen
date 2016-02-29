@@ -1,20 +1,14 @@
 from setuptools import setup
-from os import path
-import codecs
 
-here = path.abspath(path.dirname(__file__))
-
-# Get the long description from the README file
-with codecs.open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
 
 setup(
     name='pypatgen',
-    version='0.1.3',
+    version='0.1.4',
     description='TeX hyphenation pattern generator',
-    long_description=long_description,
-    url='https://github.com/pgmmpk/pypatgen',
 
+    url='https://github.com/pgmmpk/pypatgen',
+    download_url='https://github.com/pgmmpk/pypatgen/0.1.4',
+    
     author='Mike Kroutikov',
     author_email='pgmmpk@gmail.com',
 
@@ -22,10 +16,11 @@ setup(
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Beta',
 
         'License :: OSI Approved :: MIT License',
 
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
     ],
 
