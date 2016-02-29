@@ -217,7 +217,7 @@ pypatgen words train -r 1,4 -s 1:1:2 -c
 ```
 
 8. Still have about 250 of false predictions and about 1000 of missed hyphens. Lets train another two layers:
-```bash
+   ```bash
 pypatgen words train -r 1,5 -s 1:1:2 -c
 > Training hyphenation patterns (level=5)
 >     range of pattern lengths: 1..5
