@@ -1,7 +1,7 @@
 # pypatgen
 TeX hypenation pattern generator (python version of "patgen").
 
-WARNING: pre-alpha quality! Work-in-progress! You've been warned.
+WARNING: beta quality! Work-in-progress! You've been warned.
 
 Some 30+ years ago Frank Liang proposed a hyphenation algorithm based on patterns. The advantage was that it was reasonably fast and
 required limited memory to run. For pattern training Liang used a heuristics, and implemented it in a `patgen` program that is part
@@ -21,9 +21,21 @@ Input and output files use UTF-8 encoding. Generated patterns and exception list
 directly used in modern Unicode TeX engines (XeTeX, LuaTeX). If you want to build hyphenation 
 patterns for 8-bit (legacy) TeX engines, re-encode output accordingly.
 
+## Installation
 
-How to train it
-===============
+### From PyPI repository
+```
+pip install pypatgen
+```
+
+### Bleeding edge (from github)
+```
+git clone https://github.com/pgmmpk/pypatgen.git
+cd pypatgen
+python setup.py install
+```
+
+## How to train hyphenation patterns
 
 TeX uses hyphenation patterns that are organized in a list of pattern sets. First pattern set in the list generates hyphenation suggestions.
 Second pattern set in the list generates pattern inhibitions. Third pattern set suggests some more hyphenations, and so on and so forth.
@@ -60,8 +72,9 @@ The overall workflow is like this:
 7. At any time you can examine project by using `show` command.
 
 
-Sample training session: generating hyphenation patterns for [Church Slavonic](https://en.wikipedia.org/wiki/Church_Slavonic_language)
-=======================
+## Sample training session
+
+Lets generate hyphenation patterns for [Church Slavonic](https://en.wikipedia.org/wiki/Church_Slavonic_language)
 
 1. Download hyphenation dictionary for Church Slavonic language:
    ```bash
