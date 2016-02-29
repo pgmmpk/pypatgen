@@ -7,7 +7,7 @@ setup(
     description='TeX hyphenation pattern generator',
 
     url='https://github.com/pgmmpk/pypatgen',
-    download_url='https://github.com/pgmmpk/pypatgen/0.1.5',
+    download_url='https://github.com/pgmmpk/pypatgen/tarball/0.1.5',
     
     author='Mike Kroutikov',
     author_email='pgmmpk@gmail.com',
