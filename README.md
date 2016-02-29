@@ -232,7 +232,7 @@ pypatgen words train -r 1,5 -s 1:1:2 -c
 > ...Committed!
 ```
    and inhibiting layer:
-```bash
+   ```bash
 pypatgen words train -r 1,6 -s 1:1:1 -c
 > Training inhibiting patterns (level=6)
 >     range of pattern lengths: 1..6
