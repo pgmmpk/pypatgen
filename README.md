@@ -1,4 +1,7 @@
 # pypatgen
+
+[![Build Status](https://travis-ci.org/pgmmpk/pypatgen.svg?branch=master)](https://travis-ci.org/pgmmpk/pypatgen)
+
 TeX hypenation pattern generator (python version of "patgen").
 
 WARNING: beta quality! Work-in-progress! You've been warned.
