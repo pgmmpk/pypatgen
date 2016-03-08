@@ -193,6 +193,24 @@ def main_test(args):
     return 0
 
 
+def main_swap(args):
+    project = Project.load(args.project)
+    project2 = Project.load(args.project2)
+    
+    if len(project.patternset) != len(project2.patternset):
+        raise ValueError('You can only swap layers between projects with same number of layers!')
+    
+    for i in range(1, len(project.patternset), 2):
+        project.patternset[i], project2.patternset[i] = project2.patternset[i], project.patternset[i]
+
+    project.missed, project.false = do_test(project, project.dictionary)
+    project2.missed, project2.false = do_test(project2, project2.dictionary)
+    
+    if args.commit:
+        project.save(args.project)
+        project2.save(args.project2)
+
+
 def do_test(project, dictionary):
 
     total_hyphens = dictionary.compute_total_hyphens()
@@ -201,6 +219,8 @@ def do_test(project, dictionary):
 
     print('Missed (weighted):', num_missed, '(%4.3f%%)' % (num_missed * 100 / (total_hyphens + 0.000001)))
     print('False (weighted):', num_false,   '(%4.3f%%)' % (num_false * 100 / (total_hyphens + 0.000001)))
+    
+    return num_missed, num_false
 
 
 def main():
@@ -240,11 +260,15 @@ def main():
     parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
     parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
 
-    # "teste" command
+    # "test" command
     parser_test = sub.add_parser('test', help='Test performance on an independent dictionary')
     parser_test.add_argument('dictionary', help='File name of a test dictionary')
     parser_test.add_argument('-e', '--errors', help='Optional file to write errors (for error analysis)')
 
+    # "swap" command
+    parser_swap = sub.add_parser('swap', help='Swaps odd layers between two projects')
+    parser_swap.add_argument('project2', help='File name of a second project')
+    parser_swap.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
 
     args = parser.parse_args()
     if args.cmd == 'new':
@@ -263,6 +287,8 @@ def main():
         parser.exit(main_batchtrain(args))
     elif args.cmd == 'test':
         parser.exit(main_test(args))
+    elif args.cmd == 'swap':
+        parser.exit(main_swap(args))
     else:
         parser.error('Command required')
 
