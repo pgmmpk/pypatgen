@@ -22,6 +22,9 @@ class Layer:
     
     def __getitem__(self, i):
         return self._data[i]
+    
+    def get(self, i, defaultval=None):
+        return self._data.get(i, defaultval)
 
     def __len__(self):
         return len(self._data)
@@ -29,8 +32,17 @@ class Layer:
     def keys(self):
         return self._data.keys()
     
+    def items(self):
+        return self._data.items()
+    
+    def values(self):
+        return self._data.items()
+    
     def update(self, vals):
         self._data.update(vals)
+    
+    def __repr__(self):
+        return '<Layer patlen_range=%r, selector=%r, data=%r>' % (self.patlen_range, self.selector, self._data)
 
     def train(self, patlen, dictionary, margins):
         patterns = collections.defaultdict(set)

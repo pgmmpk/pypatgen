@@ -58,21 +58,6 @@ class Project:
         if version != self.VERSION:
             raise RuntimeError('Incompatible version: %s (expected %s)' % (version, self.VERSION))
     
-    def train_new_layer(self, patlen_range, selector):
-        inhibiting = len(self.patternset) & 1
-
-        layer = Layer(patlen_range, selector, inhibiting)
-        self.patternset.append(layer)
-
-        for patlen in stagger_range(patlen_range.start, patlen_range.end + 1):
-            additions = layer.train(patlen, self.dictionary, self.margins)
-            yield additions, patlen
-
-        # evaluate
-        missed, false = layer.apply_to_dictionary(inhibiting, self.dictionary, margins=self.margins)
-        self.missed = missed
-        self.false = false
-
     @classmethod
     def load(cls, filename):
 
@@ -86,3 +71,21 @@ class Project:
         
         with open(filename, 'wb') as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
+
+    def train_new_layer(self, patlen_range, selector):
+
+        inhibiting = len(self.patternset) & 1
+    
+        layer = Layer(patlen_range, selector, inhibiting)
+        self.patternset.append(layer)
+        
+        for patlen in stagger_range(patlen_range.start, patlen_range.end + 1):
+            additions = layer.train(patlen, self.dictionary, self.margins)
+            print('Selected %s patterns of length %s' % (len(additions), patlen))
+    
+        # evaluate
+        missed, false = layer.apply_to_dictionary(inhibiting, self.dictionary, margins=self.margins)
+        self.missed = missed
+        self.false = false
+        
+        return layer

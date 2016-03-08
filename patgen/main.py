@@ -92,8 +92,7 @@ def main_train(args):
     
     total_hyphens = project.total_hyphens
 
-    for patterns, patlen in project.train_new_layer(patlen_rng, selector):
-        print('Selected %s patterns of length %s' % (len(patterns), patlen))
+    project.train_new_layer(patlen_rng, selector)
 
     missed, false = project.missed, project.false
 
@@ -132,40 +131,17 @@ def main_export(args):
     
     project = Project.load(args.project)
 
-    keys = set()
-    for layer in project.patternset:
-        keys.update(layer.keys())
-    
-    patts = []
-    for key in sorted(keys):
-        controls = [0] * (len(key) + 1)
-        level = 0
-        for layer in project.patternset:
-            level += 1
-            for index in layer.get(key, EMPTYSET):
-                controls[index] = level
-
-        out = []
-        for i, c in enumerate(controls):
-            if i > 0:
-                out.append(key[i-1])
-            if c > 0:
-                out.append(str(c))
-
-        patt = ''.join(out)
-        patts.append(patt)
-
     num_patterns = 0
     num_exceptions = 0
     
     with codecs.open(args.output, 'w', 'utf-8') as f:
         f.write('\\patterns{\n')
-        for patt in patts:
+        for patt in project.patternset.pattern_strings():
             f.write(patt + '\n')
             num_patterns += 1
         f.write('}\n')
         f.write('\\hyphenation{\n')
-        for word, _, _, _ in do_test(project, project.dictionary):
+        for word, _, _, _ in project.patternset.errors(project.dictionary, project.margins):
             text = format_dictionary_word(word, project.dictionary[word])
             f.write(text + '\n')
             num_exceptions += 1
@@ -209,10 +185,10 @@ def main_test(args):
 
     dictionary = Dictionary.load(args.dictionary)
 
-    errors = do_test(project, dictionary)
+    do_test(project, dictionary)
     if args.errors:
         with codecs.open(args.errors, 'w', 'utf-8') as f:
-            for word, hyphens, missed, false in errors:
+            for word, hyphens, missed, false in project.patternset.errors(project.dictionary, project.margins):
                 f.write(format_dictionary_word(word, hyphens, missed, false) + '\n')
 
     return 0
@@ -222,30 +198,10 @@ def do_test(project, dictionary):
 
     total_hyphens = dictionary.compute_total_hyphens()
 
-    num_missed = 0
-    num_false = 0
-    errors = []
-    for word, hyphens in dictionary.items():
-        prediction = project.patternset.hyphenate(word, margins=project.margins) 
-        weight = dictionary.weights[word]
-
-        err = False
-        missed = hyphens - prediction
-        false  = prediction - hyphens
-        if missed:
-            num_missed += sum(weight[x] for x in missed)
-            err = True
-        if false:
-            num_false += sum(weight[x] for x in false)
-            err = True
-
-        if err:
-            errors.append( (word, hyphens, missed, false) )
+    num_missed, num_false = project.patternset.evaluate(dictionary, project.margins)
 
     print('Missed (weighted):', num_missed, '(%4.3f%%)' % (num_missed * 100 / (total_hyphens + 0.000001)))
     print('False (weighted):', num_false,   '(%4.3f%%)' % (num_false * 100 / (total_hyphens + 0.000001)))
-    
-    return errors
 
 
 def main():
