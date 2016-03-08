@@ -4,30 +4,40 @@ Created on Feb 18, 2016
 @author: mike
 '''
 import unittest
-from patgen import chunker
+from patgen.chunker import Chunker
+from patgen.margins import Margins
+
 
 class TestChunker(unittest.TestCase):
     
     def test1(self):
         
-        chunks = set(x[1] for x in chunker('mike', chunklen=2, hyphen_position=1, margin_left=2, margin_right=2))
+        chunker = Chunker(2, Margins(2,2))
         
-        self.assertEquals(chunks, {'ik'})
+        chunks = set(chunker('mike', hyphenpos=1))
+        
+        self.assertEquals(chunks, {(2, 'ik')})
 
     def test2(self):
         
-        chunks = set(x[1] for x in chunker('mike', chunklen=2, hyphen_position=0, margin_left=2, margin_right=2))
+        chunker = Chunker(2, Margins(2,2))
+
+        chunks = set(chunker('mike', hyphenpos=0))
         
-        self.assertEquals(chunks, {'ke'})
+        self.assertEquals(chunks, {(3, 'ke')})
 
     def test3(self):
         
-        chunks = set(x[1] for x in chunker('mike', chunklen=2, hyphen_position=2, margin_left=2, margin_right=2))
+        chunker = Chunker(2, Margins(2,2))
+
+        chunks = set(chunker('mike', hyphenpos=2))
         
-        self.assertEquals(chunks, {'mi'})
+        self.assertEquals(chunks, {(1, 'mi')})
 
     def test4(self):
         
-        chunks = set(x[1] for x in chunker('mike', chunklen=2, hyphen_position=1, margin_left=1, margin_right=1))
+        chunker = Chunker(2, Margins(1,1))
+
+        chunks = set(chunker('mike', hyphenpos=1))
         
-        self.assertEquals(chunks, {'mi', 'ik', 'ke'})
+        self.assertEquals(chunks, {(1, 'mi'), (2, 'ik'), (3, 'ke')})

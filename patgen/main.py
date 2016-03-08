@@ -7,21 +7,15 @@ from __future__ import print_function
 
 import os
 import codecs
-import collections
-import datetime
-from patgen import load_dictionary, save_project, load_project, parse_selector,\
-    stagger_range, generate_pattern_statistics, evaluate_pattern_set, EMPTYSET,\
-    compute_dictionary_errors, format_dictionary_word,\
-    TRUE_HYPHEN, MISSED_HYPHEN, FALSE_HYPHEN, NOT_A_HYPHEN, apply_patterns,\
-    format_hyphenation, parse_margins
 import sys
+from patgen.margins import Margins
+from patgen import stagger_range, EMPTYSET
+from patgen.dictionary import Dictionary, format_dictionary_word
+from patgen.project import Project
+from patgen.selector import Selector
+from patgen.range import Range
+from patgen.layer import Layer
 
-
-class SimpleNamespace:
-    
-    def __init__(self, **kav):
-        for name, value in kav.items():
-            setattr(self, name, value)
 
 def main_new(args):
     
@@ -33,50 +27,24 @@ def main_new(args):
         print('Dictionary file not found', args.dictionary)
         return -1
     
-    dictionary, weights = load_dictionary(args.dictionary, ignore_weights=args.ignore_weights)
-    for hyphen in dictionary.values():
-        for i in range(len(hyphen)):
-            if hyphen[i] == TRUE_HYPHEN:
-                hyphen[i] = MISSED_HYPHEN
-            elif hyphen[i] == FALSE_HYPHEN:
-                hyphen[i] = NOT_A_HYPHEN
+    dictionary = Dictionary.load(args.dictionary)
+    for word in dictionary.keys():
+        dictionary.missed[word].clear()
+        dictionary.missed[word].update(dictionary[word])  # all hyphens are initially missing
+        dictionary.false[word].clear()
 
     if args.margins is None:
-        print('Automatically detecting hyphenation margins (from dictionary)')
-        margin_left = 1000
-        margin_right = 1000
-        for hyphen in dictionary.values():
-            for i in range(len(hyphen)):
-                if hyphen[i] != NOT_A_HYPHEN:
-                    margin_left = min(margin_left, i)
-                    margin_right = min(margin_right, len(hyphen) - 1 - i)
+        print('Automatically computing hyphenation margins from dictionary')
+        margins = dictionary.compute_margins()
     else:
-        margin_left, margin_right = parse_margins(args.margins)
+        margins = Margins.parse(args.margins)
 
-    total_hyphens = 0
-    for word, hyphens in dictionary.items():
-        weight = weights[word]
-        total_hyphens += count_hyphens(hyphens, weight)
-        total_hyphens += count_missed(hyphens, weight)
-    
-    project = SimpleNamespace(
-            dictionary=dictionary,
-            weights=weights,
-            margin_left=margin_left,
-            margin_right=margin_right,
-            ignore_weights=args.ignore_weights,
-            total_hyphens=total_hyphens,
-            patterns=[],
-            params=[],
-            created=datetime.datetime.now(),
-            modified=datetime.datetime.now()
-        )
-    
-    save_project(project, args.project)
-    
+    project = Project(dictionary, margins, dictionary.compute_total_hyphens())
+    project.save(args.project)
+
     print('Created project', args.project, 'from dictionary', args.dictionary)
     print()
-    
+
     return main_show(args)
 
 
@@ -86,88 +54,86 @@ def main_show(args):
         print('Project file not found:', args.project)
         return -1
     
-    project = load_project(args.project)
+    project = Project.load(args.project)
     
     print('Project file', args.project)
     print('\tcreated:', project.created)
     print('\tlast modified:', project.modified)
-    print('\tmargin_left:', project.margin_left)
-    print('\tmargin_right:', project.margin_right)
-    print('\tdictionary size:', len(project.dictionary))
-    if project.ignore_weights:
-        print('\tdictionary weights were ignored (-i flag active)')
-    print('\ttotal hyphens: (weighted)', project.total_hyphens)
-    print('\tnumber of pattern levels:', len(project.patterns))
+    print('\tmargins:', project.margins)
+    print('\tdictionary size:', len(project.dictionary.keys()))
+    #if project.ignore_weights:
+    #    print('\tdictionary weights were ignored (-i flag active)')
+    print('\ttotal hyphens: (weighted)', project.dictionary.compute_total_hyphens())
+    print('\tnumber of pattern levels:', len(project.patternset))
     
-    for i, patternset in enumerate(project.patterns):
+    for i, layer in enumerate(project.patternset):
         if i & 1 == 0:
-            print((i+1), 'HYPHENATING patternset, num patterns:', len(patternset))
+            print((i+1), 'HYPHENATING patternset, num patterns:', len(layer))
         else:
-            print((i+1), 'INHIBITING patternset, num patterns:', len(patternset))
-        params = project.params[i]
-        print('\tTrained with: range %s, selector %s' % (params.range, params.selector))
+            print((i+1), 'INHIBITING patternset, num patterns:', len(layer))
+        print('\tTrained with: range %r, selector %r' % (layer.patlen_range, layer.selector))
 
     return 0
 
 
 def main_train(args):
     
-    good_weight, bad_weight, threshold = parse_selector(args.selector)
-
-    project = load_project(args.project)
+    project = Project.load(args.project)
 
     inhibiting = False
-    if len(project.patterns) & 1:
-        print('Training inhibiting patterns (level=%s)' % (len(project.patterns)+1))
+    if len(project.patternset) & 1:
+        print('Training INHIBINTING pattern layer (level=%s)' % (len(project.patternset)+1))
         inhibiting = True
     else:
-        print('Training hyphenation patterns (level=%s)' % (len(project.patterns)+1))
-    
-    min_pattern_length, max_pattern_length = parse_margins(args.range)
+        print('Training HYPHENATION pattern layer (level=%s)' % (len(project.patternset)+1))
 
-    print('\trange of pattern lengths: %s..%s' % (min_pattern_length, max_pattern_length))
+    patlen_rng = Range.parse(args.range)
+    selector = Selector.parse(args.selector)
+
+    print('\tpattern lengths:', patlen_rng)
     print('\tselector:', args.selector)
     
     total_hyphens = project.total_hyphens
 
-    patternset = collections.defaultdict(set)
-    for pattlen in stagger_range(min_pattern_length, max_pattern_length+1):
-        for position in range(0, pattlen+1):
-            for ch, num_good, num_bad in generate_pattern_statistics(project.dictionary,
-                                                                    project.weights,
-                                                                    inhibiting, 
-                                                                    pattlen, 
-                                                                    position, 
-                                                                    margin_left=project.margin_left,
-                                                                    margin_right=project.margin_right):
-                if good_weight * num_good - bad_weight * num_bad >= threshold:
-                    patternset[ch].add(position)
-
-        print('Selected %s patterns at level %s' % (len(patternset), len(project.patterns) + 1))
+    layer = Layer(patlen_rng, selector)
+    layer_len = 0
+    for patlen in stagger_range(patlen_rng.start, patlen_rng.end + 1):
+        layer.train(patlen, project.dictionary, inhibiting, project.margins)
+        print('Selected %s patterns of length %s' % (len(layer)-layer_len, patlen))
+        layer_len = len(layer)
 
     # evaluate
-    evaluate_pattern_set(patternset, inhibiting, project.dictionary, margin_left=project.margin_left, margin_right=project.margin_right)
-
-    missed = 0
-    false = 0
-    for word, hyphens in project.dictionary.items():
-        weight = project.weights[word]
-        
-        missed += count_missed(hyphens, weight)
-        false += count_false(hyphens, weight)
+    missed, false = layer.apply_to_dictionary(inhibiting, project.dictionary, margins=project.margins)
 
     print('Missed (weighted):', missed, '(%4.3f%%)' % (missed * 100 / (total_hyphens + 0.000001)))
     print('False (weighted):', false,   '(%4.3f%%)' % (false * 100 / (total_hyphens + 0.000001)))
 
+    project.patternset.append(layer)
+
+    #do_test(project, project.dictionary)
+
     if args.commit:
-        project.params.append(SimpleNamespace(
-            range = args.range,
-            selector   = args.selector
-        ))
-        project.patterns.append(patternset)
-        save_project(project, args.project)
+        project.save(args.project)
         print('...Committed!')
 
+    return 0
+
+
+def main_batchtrain(args):
+
+    with codecs.open(args.specs, 'r', 'utf-8') as f:
+        batches = eval(f.read())
+
+    for rng, selector in batches:
+        args.range = '%s-%s' % rng
+        args.selector = '%s:%s:%s' % selector
+        args.commit = True
+        
+        rc = main_train(args)
+        if rc:
+            print('Error:', rc)
+            return rc
+    
     return 0
 
 
@@ -176,19 +142,19 @@ def main_export(args):
         print('Pattern file already exists! Delete it first, or change the name. Pattern file: %s' % args.output)
         return -1
     
-    project = load_project(args.project)
+    project = Project.load(args.project)
 
     keys = set()
-    for patternset in project.patterns:
-        keys.update(patternset.keys())
+    for layer in project.patternset:
+        keys.update(layer.keys())
     
     patts = []
     for key in sorted(keys):
         controls = [0] * (len(key) + 1)
         level = 0
-        for patternset in project.patterns:
+        for layer in project.patternset:
             level += 1
-            for index in patternset.get(key, EMPTYSET):
+            for index in layer.get(key, EMPTYSET):
                 controls[index] = level
 
         out = []
@@ -197,10 +163,10 @@ def main_export(args):
                 out.append(key[i-1])
             if c > 0:
                 out.append(str(c))
+
         patt = ''.join(out)
         patts.append(patt)
-    
-    
+
     num_patterns = 0
     num_exceptions = 0
     
@@ -211,10 +177,7 @@ def main_export(args):
             num_patterns += 1
         f.write('}\n')
         f.write('\\hyphenation{\n')
-        for word, _ in compute_dictionary_errors(project.patterns,
-                                                          project.dictionary,
-                                                          margin_left=project.margin_left,
-                                                          margin_right=project.margin_right):
+        for word, _, _, _ in do_test(project, project.dictionary):
             text = format_dictionary_word(word, project.dictionary[word])
             f.write(text + '\n')
             num_exceptions += 1
@@ -228,27 +191,16 @@ def main_export(args):
 
 
 def main_show_errors(args):
-    project = load_project(args.project)
-
-    for word, prediction in compute_dictionary_errors(project.patterns, 
-                                            project.dictionary, 
-                                            margin_left=project.margin_left, 
-                                            margin_right=project.margin_right):
-        
-        text = format_dictionary_word(word, prediction, project.dictionary[word])
-        print(text, text.encode('unicode-escape').decode())
+    project = Project.load(args.project)
+    
+    do_test(project, project.dictionary)
     
     return 0
 
 
 def main_hyphenate(args):
     
-    project = load_project(args.project)
-    
-    maxchunk = 0
-    for patternset in project.patterns:
-        if patternset:
-            maxchunk = max(maxchunk, max(len(x) for x in patternset.keys()))
+    project = Project.load(args.project)
 
     with codecs.open(args.input or sys.stdin.fileno(), 'r', 'utf-8') as f:
         with codecs.open(args.output or sys.stdout.fileno(), 'w', 'utf-8') as out:
@@ -258,20 +210,54 @@ def main_hyphenate(args):
                 if not word:
                     continue
     
-                prediction = apply_patterns(project.patterns, word, maxchunk, 
-                                            margin_left=project.margin_left, 
-                                            margin_right=project.margin_right)
-                
-                s = format_hyphenation(word, prediction)
+                prediction = project.patterns.hyphenate(word, margins=project.margins) 
+
+                s = format_dictionary_word(word, prediction)
                 out.write(s + '\n')
 
 
-def count_hyphens(hyphens, weights):
-    return sum(weights[i] if x == TRUE_HYPHEN else 0 for i,x in enumerate(hyphens))
-def count_missed(hyphens, weights):
-    return sum(weights[i] if x == MISSED_HYPHEN else 0 for i,x in enumerate(hyphens))
-def count_false(hyphens, weights):
-    return sum(weights[i] if x == FALSE_HYPHEN else 0 for i,x in enumerate(hyphens))
+def main_test(args):
+    project = Project.load(args.project)
+
+    dictionary = Dictionary.load(args.dictionary)
+
+    errors = do_test(project, dictionary)
+    if args.errors:
+        with codecs.open(args.errors, 'w', 'utf-8') as f:
+            for word, hyphens, missed, false in errors:
+                f.write(format_dictionary_word(word, hyphens, missed, false) + '\n')
+
+    return 0
+
+
+def do_test(project, dictionary):
+
+    total_hyphens = dictionary.compute_total_hyphens()
+
+    num_missed = 0
+    num_false = 0
+    errors = []
+    for word, hyphens in dictionary.items():
+        prediction = project.patternset.hyphenate(word, margins=project.margins) 
+        weight = dictionary.weights[word]
+
+        err = False
+        missed = hyphens - prediction
+        false  = prediction - hyphens
+        if missed:
+            num_missed += sum(weight[x] for x in missed)
+            err = True
+        if false:
+            num_false += sum(weight[x] for x in false)
+            err = True
+
+        if err:
+            errors.append( (word, hyphens, missed, false) )
+
+    print('Missed (weighted):', num_missed, '(%4.3f%%)' % (num_missed * 100 / (total_hyphens + 0.000001)))
+    print('False (weighted):', num_false,   '(%4.3f%%)' % (num_false * 100 / (total_hyphens + 0.000001)))
+    
+    return errors
 
 
 def main():
@@ -285,7 +271,6 @@ def main():
     parser_new = sub.add_parser('new', help='Creates new hyphenation pattern project from dictionary')
     parser_new.add_argument('dictionary', help='Dictionary of hyphenated words (one word per line)')
     parser_new.add_argument('-m', '--margins', help='Hyphenation margins. If not set, will  be computed from the dictionary')
-    parser_new.add_argument('-i', '--ignore_weights', default=False, action='store_true', help='If set, ignores dictionary weights (not recommented)')
     
     # "show" command
     parser_show = sub.add_parser('show', help='Displays information about current hyphenation project')  # @UnusedVariable
@@ -295,6 +280,10 @@ def main():
     parser_train.add_argument('-s', '--selector', default='1:5:10', help='triplet of numbers that control pattern selection. Format is: "good_weight:bad_weight:threshold"')
     parser_train.add_argument('-r', '--range', default='1,5', help='range of patterns lengths. Default is 1,5')
     parser_train.add_argument('-c', '--commit', default=False, action='store_true', help='If set, project is modified')
+
+    # "batchtrain" command
+    parser_batchtrain = sub.add_parser('batchtrain', help='Trains all levels from batch specs')
+    parser_batchtrain.add_argument('-s', '--specs', help='file with batch training parameters specifications')
 
     # "export" command
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
@@ -307,6 +296,12 @@ def main():
     parser_hyphenate = sub.add_parser('hyphenate', help='Hyphenates a list of words')
     parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
     parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
+
+    # "teste" command
+    parser_test = sub.add_parser('test', help='Test performance on an independent dictionary')
+    parser_test.add_argument('dictionary', help='File name of a test dictionary')
+    parser_test.add_argument('-e', '--errors', help='Optional file to write errors (for error analysis)')
+
 
     args = parser.parse_args()
     if args.cmd == 'new':
@@ -321,9 +316,50 @@ def main():
         parser.exit(main_show_errors(args))
     elif args.cmd == 'hyphenate':
         parser.exit(main_hyphenate(args))
+    elif args.cmd == 'batchtrain':
+        parser.exit(main_batchtrain(args))
+    elif args.cmd == 'test':
+        parser.exit(main_test(args))
     else:
         parser.error('Command required')
 
 
 if __name__ == '__main__':
     main()
+
+'''
+
+1. Dictionary load and save tools:
+   A. load dictionary from file (optional missed and false hyphens are marked there)
+   B. save dictionary to file
+
+2. Pattern set load and save tools:
+   A. Load TeX pattern set from file
+   B. Save TeX pattern set to file
+   C. Assign layers from one pattern set to another
+
+Actions:
+
+- apply patternset to a word
+- apply patternset to every word in a dictionary and compute false and missed
+- apply just one level of pattern to a word
+
+
+# Dictionary
+dictionary = Dictionary.load(filename)
+dictionary.margins
+dictionary.weights
+dictionary.data
+dictionary.keys
+
+# chunker
+
+# new project
+project = Project(dictionary, margins=(1,1))
+
+# new PatternLayer
+layer = Layer()
+
+# 
+
+'''
