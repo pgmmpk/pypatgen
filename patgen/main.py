@@ -9,12 +9,11 @@ import os
 import codecs
 import sys
 from patgen.margins import Margins
-from patgen import stagger_range, EMPTYSET
+from patgen import EMPTYSET
 from patgen.dictionary import Dictionary, format_dictionary_word
 from patgen.project import Project
 from patgen.selector import Selector
 from patgen.range import Range
-from patgen.layer import Layer
 
 
 def main_new(args):
@@ -28,10 +27,6 @@ def main_new(args):
         return -1
     
     dictionary = Dictionary.load(args.dictionary)
-    for word in dictionary.keys():
-        dictionary.missed[word].clear()
-        dictionary.missed[word].update(dictionary[word])  # all hyphens are initially missing
-        dictionary.false[word].clear()
 
     if args.margins is None:
         print('Automatically computing hyphenation margins from dictionary')
@@ -39,8 +34,10 @@ def main_new(args):
     else:
         margins = Margins.parse(args.margins)
 
-    project = Project(dictionary, margins, dictionary.compute_total_hyphens())
+    project = Project(dictionary, margins)
     project.save(args.project)
+    
+    print(project.missed)
 
     print('Created project', args.project, 'from dictionary', args.dictionary)
     print()
@@ -63,7 +60,9 @@ def main_show(args):
     print('\tdictionary size:', len(project.dictionary.keys()))
     #if project.ignore_weights:
     #    print('\tdictionary weights were ignored (-i flag active)')
-    print('\ttotal hyphens: (weighted)', project.dictionary.compute_total_hyphens())
+    print('\ttotal hyphens: (weighted)', project.total_hyphens)
+    print('\ttotal missed : (weighted)', project.missed, percent(project.missed, project.total_hyphens))
+    print('\ttotal false  : (weighted)', project.false, percent(project.false, project.total_hyphens))
     print('\tnumber of pattern levels:', len(project.patternset))
     
     for i, layer in enumerate(project.patternset):
@@ -80,10 +79,8 @@ def main_train(args):
     
     project = Project.load(args.project)
 
-    inhibiting = False
     if len(project.patternset) & 1:
         print('Training INHIBINTING pattern layer (level=%s)' % (len(project.patternset)+1))
-        inhibiting = True
     else:
         print('Training HYPHENATION pattern layer (level=%s)' % (len(project.patternset)+1))
 
@@ -95,22 +92,13 @@ def main_train(args):
     
     total_hyphens = project.total_hyphens
 
-    layer = Layer(patlen_rng, selector)
-    layer_len = 0
-    for patlen in stagger_range(patlen_rng.start, patlen_rng.end + 1):
-        layer.train(patlen, project.dictionary, inhibiting, project.margins)
-        print('Selected %s patterns of length %s' % (len(layer)-layer_len, patlen))
-        layer_len = len(layer)
+    for patterns, patlen in project.train_new_layer(patlen_rng, selector):
+        print('Selected %s patterns of length %s' % (len(patterns), patlen))
 
-    # evaluate
-    missed, false = layer.apply_to_dictionary(inhibiting, project.dictionary, margins=project.margins)
+    missed, false = project.missed, project.false
 
-    print('Missed (weighted):', missed, '(%4.3f%%)' % (missed * 100 / (total_hyphens + 0.000001)))
-    print('False (weighted):', false,   '(%4.3f%%)' % (false * 100 / (total_hyphens + 0.000001)))
-
-    project.patternset.append(layer)
-
-    #do_test(project, project.dictionary)
+    print('Missed (weighted):', missed, percent(missed, total_hyphens))
+    print('False (weighted):', false, percent(false, total_hyphens))
 
     if args.commit:
         project.save(args.project)
@@ -124,9 +112,9 @@ def main_batchtrain(args):
     with codecs.open(args.specs, 'r', 'utf-8') as f:
         batches = eval(f.read())
 
-    for rng, selector in batches:
-        args.range = '%s-%s' % rng
-        args.selector = '%s:%s:%s' % selector
+    for params in batches:
+        args.range = params['range']
+        args.selector = params['selector']
         args.commit = True
         
         rc = main_train(args)
@@ -323,6 +311,9 @@ def main():
     else:
         parser.error('Command required')
 
+
+def percent(x, base):
+    return '%4.2f%%' % (100.0 * x / (base + 0.0000001))
 
 if __name__ == '__main__':
     main()

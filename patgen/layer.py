@@ -13,10 +13,10 @@ class Layer:
     def maxchunk(self):
         return self.patlen_range.end
 
-    #def __init__(self, patlen_range, selector):
-    def __init__(self, patlen_range=None, selector=None):
+    def __init__(self, patlen_range, selector, inhibiting):
         self.patlen_range = patlen_range
         self.selector = selector
+        self.inhibiting = inhibiting
         
         self._data = collections.defaultdict(set)
     
@@ -28,16 +28,23 @@ class Layer:
     
     def keys(self):
         return self._data.keys()
+    
+    def update(self, vals):
+        self._data.update(vals)
 
-    def train(self, patlen, dictionary, inhibiting, margins):
+    def train(self, patlen, dictionary, margins):
+        patterns = collections.defaultdict(set)
         for position in range(0, patlen+1):
             for ch, num_good, num_bad in dictionary.generate_pattern_statistics(
-                                                                            inhibiting, 
+                                                                            self.inhibiting, 
                                                                             patlen, 
                                                                             position, 
                                                                             margins=margins):
                     if self.selector.select(num_good, num_bad):
-                        self[ch].add(position)
+                        patterns[ch].add(position)
+
+        self.update(patterns)
+        return patterns
 
     def predict(self, word, margins):
         '''

@@ -64,23 +64,33 @@ class Dictionary:
 
         return Margins(margin_left, margin_right)
 
+    def make_all_missed(self):
+        for word in self.keys():
+            self.missed[word].clear()
+            self.missed[word].update(self[word])  # all hyphens are initially missing
+            self.false[word].clear()
+
     @classmethod
     def load(cls, filename):
-        dictionary = cls()
 
         with codecs.open(filename, 'r', 'utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith('#'):  # comment line
-                    continue
+            return cls.from_string(f.read())
+    
+    @classmethod
+    def from_string(cls, string):
+        dictionary = cls()
+        for line in string.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('#'):  # comment line
+                continue
 
-                text, hyphens, missed, false, weight = parse_dictionary_word(line)
-                dictionary._hyphens[text] = hyphens
-                dictionary._weights[text] = weight
-                dictionary._missed[text] = missed
-                dictionary._false[text] = false
+            text, hyphens, missed, false, weight = parse_dictionary_word(line)
+            dictionary._hyphens[text] = hyphens
+            dictionary._weights[text] = weight
+            dictionary._missed[text] = missed
+            dictionary._false[text] = false
 
         return dictionary
     
@@ -98,7 +108,7 @@ class Dictionary:
         '''
         Takes a dictionary of word hyphenations and
         1. Finds all possible patterns of a given length and given hyphen position, and
-        2. Computes performance of each pattern - how many times pattern finds "ggod" hyphen, and how many time it errors
+        2. Computes performance of each pattern - how many times pattern finds "good" hyphen, and how many time it errors
         '''
         chunker = Chunker(patt_len, margins=margins)
         
