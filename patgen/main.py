@@ -226,7 +226,7 @@ def main():
 
     # "batchtrain" command
     parser_batchtrain = sub.add_parser('batchtrain', help='Trains all levels from batch specs')
-    parser_batchtrain.add_argument('-s', '--specs', help='file with batch training parameters specifications')
+    parser_batchtrain.add_argument('specs', help='file with batch training parameters specifications')
 
     # "export" command
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
