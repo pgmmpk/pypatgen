@@ -9,7 +9,6 @@ import os
 import codecs
 import sys
 from patgen.margins import Margins
-from patgen import EMPTYSET
 from patgen.dictionary import Dictionary, format_dictionary_word
 from patgen.project import Project
 from patgen.selector import Selector
@@ -37,8 +36,6 @@ def main_new(args):
     project = Project(dictionary, margins)
     project.save(args.project)
     
-    print(project.missed)
-
     print('Created project', args.project, 'from dictionary', args.dictionary)
     print()
 
@@ -109,7 +106,9 @@ def main_train(args):
 def main_batchtrain(args):
 
     with codecs.open(args.specs, 'r', 'utf-8') as f:
-        batches = eval(f.read())
+        l = {}
+        exec(f.read(), {}, l)
+        batches = l['SPECS']
 
     for params in batches:
         args.range = params['range']
@@ -273,40 +272,3 @@ def percent(x, base):
 
 if __name__ == '__main__':
     main()
-
-'''
-
-1. Dictionary load and save tools:
-   A. load dictionary from file (optional missed and false hyphens are marked there)
-   B. save dictionary to file
-
-2. Pattern set load and save tools:
-   A. Load TeX pattern set from file
-   B. Save TeX pattern set to file
-   C. Assign layers from one pattern set to another
-
-Actions:
-
-- apply patternset to a word
-- apply patternset to every word in a dictionary and compute false and missed
-- apply just one level of pattern to a word
-
-
-# Dictionary
-dictionary = Dictionary.load(filename)
-dictionary.margins
-dictionary.weights
-dictionary.data
-dictionary.keys
-
-# chunker
-
-# new project
-project = Project(dictionary, margins=(1,1))
-
-# new PatternLayer
-layer = Layer()
-
-# 
-
-'''
