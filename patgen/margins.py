@@ -18,4 +18,4 @@ class Margins(collections.namedtuple('_Margins', ['left', 'right'])):
         return Margins(*tuple(int(x) for x in parts))
     
     def __repr__(self):
-        return '%s-%s' % self
+        return '%s,%s' % self
