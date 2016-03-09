@@ -188,6 +188,6 @@ def format_dictionary_word(word, hyphens, missed=None, false=None, weights=None)
                 if weights[0] > 1:
                     text.append(str(weights[0]))
             elif weights[i] != weights[0]:
-                text.append(weights[i])
+                text.append(str(weights[i]))
 
     return ''.join(text)
