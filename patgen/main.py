@@ -153,14 +153,6 @@ def main_export(args):
     return 0
 
 
-def main_show_errors(args):
-    project = Project.load(args.project)
-    
-    do_test(project, project.dictionary)
-    
-    return 0
-
-
 def main_hyphenate(args):
     
     project = Project.load(args.project)
@@ -184,6 +176,8 @@ def main_test(args):
 
     dictionary = Dictionary.load(args.dictionary)
 
+    print()
+    print('Performance of', args.project, 'on', args.dictionary)
     do_test(project, dictionary)
     if args.errors:
         with codecs.open(args.errors, 'w', 'utf-8') as f:
@@ -203,7 +197,10 @@ def main_swap(args):
     for i in range(1, len(project.patternset), 2):
         project.patternset[i], project2.patternset[i] = project2.patternset[i], project.patternset[i]
 
+    print()
+    print('Performance of', args.project)
     project.missed, project.false = do_test(project, project.dictionary)
+    print('Performance of', args.project2)
     project2.missed, project2.false = do_test(project2, project2.dictionary)
     
     if args.commit:
@@ -252,21 +249,18 @@ def main():
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
     parser_export.add_argument('output', help='Name of the TeX pattern file to create')
 
-    # "show_errors" command
-    parser_show_errors = sub.add_parser('show_errors', help='Shows all errors')  # @UnusedVariable
-
     # "hyphenate" command
     parser_hyphenate = sub.add_parser('hyphenate', help='Hyphenates a list of words')
     parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
     parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
 
     # "test" command
-    parser_test = sub.add_parser('test', help='Test performance on an independent dictionary')
+    parser_test = sub.add_parser('test', help='Test performance on a dictionary')
     parser_test.add_argument('dictionary', help='File name of a test dictionary')
     parser_test.add_argument('-e', '--errors', help='Optional file to write errors (for error analysis)')
 
     # "swap" command
-    parser_swap = sub.add_parser('swap', help='Swaps odd layers between two projects')
+    parser_swap = sub.add_parser('swap', help='Swaps odd layers between two projects (advanced)')
     parser_swap.add_argument('project2', help='File name of a second project')
     parser_swap.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
 
@@ -279,8 +273,6 @@ def main():
         parser.exit(main_train(args))
     elif args.cmd == 'export':
         parser.exit(main_export(args))
-    elif args.cmd == 'show_errors':
-        parser.exit(main_show_errors(args))
     elif args.cmd == 'hyphenate':
         parser.exit(main_hyphenate(args))
     elif args.cmd == 'batchtrain':
