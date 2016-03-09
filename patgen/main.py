@@ -17,6 +17,7 @@ from patgen.version import __version__
 
 
 def main_new(args):
+    print('Creating new project', args.project, 'from dictionary', args.dictionary)
     
     if os.path.exists(args.project):
         print('Project file already exists! Use different name or delete old project first. File %s' % args.project)
@@ -36,9 +37,6 @@ def main_new(args):
 
     project = Project(dictionary, margins)
     project.save(args.project)
-    
-    print('Created project', args.project, 'from dictionary', args.dictionary)
-    print()
 
     return main_show(args)
 
@@ -70,10 +68,12 @@ def main_show(args):
             print((i+1), 'INHIBITING patternset, num patterns:', len(layer))
         print('\tTrained with: range %r, selector %r' % (layer.patlen_range, layer.selector))
 
+    print()
     return 0
 
 
 def main_train(args):
+    print('Training project', args.project, 'using range', args.range, 'and selector', args.selector)
     
     project = Project.load(args.project)
 
@@ -100,11 +100,15 @@ def main_train(args):
     if args.commit:
         project.save(args.project)
         print('...Committed!')
+    else:
+        print('...Projects NOT changed (use --commit flag to save changes)')
 
+    print()
     return 0
 
 
 def main_batchtrain(args):
+    print('Batch-training of project', args.project, 'using specs from', args.specs)
 
     with codecs.open(args.specs, 'r', 'utf-8') as f:
         l = {}
@@ -125,6 +129,8 @@ def main_batchtrain(args):
 
 
 def main_export(args):
+    print('Exporting patterns from', args.project, 'and saving them in TeX format to', args.output)
+
     if os.path.exists(args.output):
         print('Pattern file already exists! Delete it first, or change the name. Pattern file: %s' % args.output)
         return -1
@@ -150,11 +156,13 @@ def main_export(args):
     print('Created TeX patterns file', args.output)
     print('Number of patterns:', num_patterns)
     print('Number of exceptions:', num_exceptions)
-    
+
+    print()
     return 0
 
 
 def main_hyphenate(args):
+    print('Hyphenating', args.input, 'into', args.output, 'using project', args.project)
     
     project = Project.load(args.project)
 
@@ -170,14 +178,17 @@ def main_hyphenate(args):
 
                 s = format_dictionary_word(word, prediction)
                 out.write(s + '\n')
+    
+    print()
+    return 0
 
 
 def main_test(args):
+    print('Testing', args.project, 'on dictionary', args.dictionary)
     project = Project.load(args.project)
 
     dictionary = Dictionary.load(args.dictionary)
 
-    print()
     print('Performance of', args.project, 'on', args.dictionary)
     do_test(project, dictionary)
     if args.errors:
@@ -185,10 +196,13 @@ def main_test(args):
             for word, hyphens, missed, false in project.patternset.errors(project.dictionary, project.margins):
                 f.write(format_dictionary_word(word, hyphens, missed, false) + '\n')
 
+    print()
     return 0
 
 
 def main_swap(args):
+    print('Swapping inhibiting layers between', args.project, 'and', args.project2)
+
     project = Project.load(args.project)
     project2 = Project.load(args.project2)
     
@@ -198,7 +212,6 @@ def main_swap(args):
     for i in range(1, len(project.patternset), 2):
         project.patternset[i], project2.patternset[i] = project2.patternset[i], project.patternset[i]
 
-    print()
     print('Performance of', args.project)
     project.missed, project.false = do_test(project, project.dictionary)
     print('Performance of', args.project2)
@@ -207,6 +220,36 @@ def main_swap(args):
     if args.commit:
         project.save(args.project)
         project2.save(args.project2)
+        print('...Committed')
+    else:
+        print('...Projects NOT changed (use --commit flag to save changes)')
+    
+    print()
+    return 0
+
+
+def main_compact(args):
+    print('Compacting hyphenation patterns for', args.project)
+    project = Project.load(args.project)
+
+    before_compact = [layer.compute_num_patterns() for layer in project.patternset]
+    
+    project.patternset.compact()
+    
+    after_compact =  [layer.compute_num_patterns() for layer in project.patternset]
+    
+    print('Result:')
+    for level0, (before, after) in enumerate(zip(before_compact, after_compact)):
+        print('\tLevel %s: %6d => %6d' % (level0+1, before, after))
+    
+    if args.commit:
+        project.save(args.project)
+        print('...Committed')
+    else:
+        print('...Project NOT changed (use --commit flag to save changes)')
+    
+    print()
+    return 0
 
 
 def do_test(project, dictionary):
@@ -266,6 +309,10 @@ def main():
     parser_swap.add_argument('project2', help='File name of a second project')
     parser_swap.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
 
+    # "compact" command
+    parser_compact = sub.add_parser('compact', help='Removes redundancy from parterns')
+    parser_compact.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
+
     if '-v' in sys.argv or '--version' in sys.argv:
         print('PYPATGEN version:', __version__)
         parser.exit(0)
@@ -287,6 +334,8 @@ def main():
         parser.exit(main_test(args))
     elif args.cmd == 'swap':
         parser.exit(main_swap(args))
+    elif args.cmd == 'compact':
+        parser.exit(main_compact(args))
     else:
         parser.error('Command required')
 

@@ -36,13 +36,16 @@ class Layer:
         return self._data.items()
     
     def values(self):
-        return self._data.items()
+        return self._data.values()
     
     def update(self, vals):
         self._data.update(vals)
     
     def __repr__(self):
         return '<Layer patlen_range=%r, selector=%r, data=%r>' % (self.patlen_range, self.selector, self._data)
+    
+    def compute_num_patterns(self):
+        return sum(len(val) for val in self.values())
 
     def train(self, patlen, dictionary, margins):
         patterns = collections.defaultdict(set)

@@ -4,6 +4,7 @@ Created on Mar 7, 2016
 @author: mike
 '''
 from patgen import EMPTYSET
+from patgen.suffix_array import SuffixArray
 
 
 class PatternSet(list):
@@ -31,28 +32,73 @@ class PatternSet(list):
         
         return prediction
     
-    def pattern_strings(self):
+    def keys(self):
         keys = set()
         for layer in self:
             keys.update(layer.keys())
-    
-        for key in sorted(keys):
-            controls = [0] * (len(key) + 1)
-            level = 0
-            for layer in self:
-                level += 1
-                for index in layer.get(key, EMPTYSET):
-                    controls[index] = level
-    
-            out = []
-            for i, c in enumerate(controls):
-                if i > 0:
-                    out.append(key[i-1])
-                if c > 0:
-                    out.append(str(c))
-    
-            yield ''.join(out)
-    
+        return keys
+
+    def pattern_strings(self):
+
+        for key in sorted(self.keys()):
+            control = self.get_pattern_control(key)
+            
+            if control:
+                yield self.format_pattern(key, control)
+
+    def get_pattern_control(self, key):
+
+        control = {}
+        for level0, layer in enumerate(self):
+            for index in layer.get(key, EMPTYSET):
+                control[index] = level0 + 1
+
+        return control
+
+    def set_pattern_control(self, key, control):
+        for layer in self:
+            layer[key].clear()
+            
+        for i, level in control.items():
+            if level > 0:  # paranoid
+                layer = self[level - 1]
+                layer[key].add(i)
+
+    def compact(self):
+        patterns = {}
+
+        for key in self.keys():
+            patterns[key] = self.get_pattern_control(key)
+
+        suffix_array = SuffixArray.build(patterns.keys())
+
+        # patterns that are substrings of other patterns
+        # can cancel longer pattern's control
+        for key, control in patterns.items():
+            for lkey, offset in suffix_array.superstrings(key):
+                if lkey == key:
+                    continue  # do not attempt to compact self!
+
+                lcontrol = patterns[lkey]
+                for i, val in control.items():
+                    lval = lcontrol.get(offset + i, 0)
+                    if 0 < lval <= val:
+                        del lcontrol[offset + i] 
+
+        for key, control in patterns.items():
+            self.set_pattern_control(key, control)
+
+    @staticmethod
+    def format_pattern(key, control):
+        out = []
+        for i in range(len(key) + 1):
+            if i > 0:
+                out.append(key[i-1])
+            c = control.get(i, 0)
+            if c > 0:
+                out.append(str(c))
+        return ''.join(out)
+
     def errors(self, dictionary, margins):
 
         for word, hyphens in dictionary.items():
