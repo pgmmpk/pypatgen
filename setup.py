@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='pypatgen',
-    version='0.2.1',
+    version='0.2.2',
     description='TeX hyphenation pattern generator',
 
     url='https://github.com/pgmmpk/pypatgen',
