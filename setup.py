@@ -1,9 +1,10 @@
 from setuptools import setup
+from patgen.version import __version__
 
 
 setup(
     name='pypatgen',
-    version='0.2.2',
+    version=__version__,
     description='TeX hyphenation pattern generator',
 
     url='https://github.com/pgmmpk/pypatgen',

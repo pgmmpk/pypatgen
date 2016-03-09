@@ -13,6 +13,7 @@ from patgen.dictionary import Dictionary, format_dictionary_word
 from patgen.project import Project
 from patgen.selector import Selector
 from patgen.range import Range
+from patgen.version import __version__
 
 
 def main_new(args):
@@ -225,8 +226,9 @@ def main():
     
     parser = argparse.ArgumentParser(description='Generates TeX hyphenation patterns')
     parser.add_argument('project', help='Name of the project file')
+
     sub    = parser.add_subparsers(help='Commands', dest='cmd')
-    
+
     # "new" command
     parser_new = sub.add_parser('new', help='Creates new hyphenation pattern project from dictionary')
     parser_new.add_argument('dictionary', help='Dictionary of hyphenated words (one word per line)')
@@ -263,6 +265,10 @@ def main():
     parser_swap = sub.add_parser('swap', help='Swaps odd layers between two projects (advanced)')
     parser_swap.add_argument('project2', help='File name of a second project')
     parser_swap.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
+
+    if '-v' in sys.argv or '--version' in sys.argv:
+        print('PYPATGEN version:', __version__)
+        parser.exit(0)
 
     args = parser.parse_args()
     if args.cmd == 'new':
