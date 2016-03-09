@@ -193,7 +193,7 @@ def main_test(args):
     do_test(project, dictionary)
     if args.errors:
         with codecs.open(args.errors, 'w', 'utf-8') as f:
-            for word, hyphens, missed, false in project.patternset.errors(project.dictionary, project.margins):
+            for word, hyphens, missed, false in project.patternset.errors(dictionary, project.margins):
                 f.write(format_dictionary_word(word, hyphens, missed, false) + '\n')
 
     print()
