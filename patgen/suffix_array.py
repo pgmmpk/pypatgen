@@ -3,7 +3,7 @@ Created on Mar 9, 2016
 
 @author: mike
 '''
-from bisect import bisect_left, bisect_right
+from bisect import bisect_left
 
 class SuffixArray:
     def __init__(self, sarray):
