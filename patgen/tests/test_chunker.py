@@ -41,3 +41,12 @@ class TestChunker(unittest.TestCase):
         chunks = set(chunker('mike', hyphenpos=1))
         
         self.assertEquals(chunks, {(1, 'mi'), (2, 'ik'), (3, 'ke')})
+
+    def test5(self):
+        
+        chunker = Chunker(3, Margins(1,1))
+        
+        chunks = set(chunker('word', hyphenpos=1))
+
+        self.assertEquals(chunks, {(1, 'wor'), (2, 'ord'), (3, 'rd.')})
+        

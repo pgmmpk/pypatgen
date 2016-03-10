@@ -134,6 +134,9 @@ class Dictionary:
                         good[ch] += w
                     elif index in hyphens and index not in missed:
                         bad[ch] += w
+        
+        ##print('.x', len([x for x in sorted(set(good.keys()) | set(bad.keys())) if x.startswith('.') ]))
+        ##print('x.', len([x for x in sorted(set(good.keys()) | set(bad.keys())) if x.endswith('.') ]))
     
         return [(ch, good[ch], bad[ch]) for ch in sorted(set(good.keys()) | set(bad.keys()))]
 

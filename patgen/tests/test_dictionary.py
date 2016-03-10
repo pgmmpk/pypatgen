@@ -3,8 +3,10 @@ Created on Mar 7, 2016
 
 @author: mike
 '''
-from patgen.dictionary import parse_dictionary_word, format_dictionary_word
+from patgen.dictionary import parse_dictionary_word, format_dictionary_word,\
+    Dictionary
 import unittest
+from patgen.margins import Margins
 
 
 class TestDictionary(unittest.TestCase):
@@ -30,3 +32,11 @@ class TestDictionary(unittest.TestCase):
         s = format_dictionary_word('hyphenation', {2, 5, 6, 7}, weights={0: 3, 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 3, 8: 3, 9: 3, 10: 3, 11: 3})
 
         self.assertEqual(s, '3hy-phe-n-a-tion')
+    
+    def test_analysis(self):
+        
+        dictionary = Dictionary.from_string('''
+        word
+        ''')
+        x = set(dictionary.generate_pattern_statistics(False, 3, 1, Margins(1,1)))
+        self.assertEqual(x, {('wor', 0, 1), ('ord', 0, 1), ('rd.', 0, 1)})

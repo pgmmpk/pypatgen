@@ -36,7 +36,7 @@ class Chunker:
         word = '.' + word + '.'
         
         start = 0
-        end = len(word) - self.chunklen  # last valid offset
+        end = len(word) - self.chunklen + 1 # last valid offset
         
         start = max(start, self.margins.left+1-hyphenpos)
         end = min(end, len(word)-self.margins.right-hyphenpos)
