@@ -205,7 +205,7 @@ def main_test(args):
         with codecs.open(args.patterns, 'w', 'utf-8') as f:
             for word, hyphens, missed, false in project.patternset.errors(dictionary, project.margins):
                 f.write(format_word_as_pattern(word, missed, false) + '\n')
-        print('Saved errors to', args.errors)
+        print('Saved errors to', args.patterns)
 
     print()
     return 0
@@ -303,8 +303,6 @@ def main_import(args):
                 patterns[text] = control
     
     if patterns:
-        print('WARNING: patterns file is empty!')
-
         maxlevel = 0
         for control in patterns.values():
             for level in control.values():
@@ -317,6 +315,8 @@ def main_import(args):
     
         for text, control in patterns.items():
             project.patternset.set_pattern_control(text, control)
+    else:
+        print('WARNING: patterns file is empty!')
 
     project.missed, project.false = do_test(project, project.dictionary)
 
