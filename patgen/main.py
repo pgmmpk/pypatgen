@@ -9,11 +9,14 @@ import os
 import codecs
 import sys
 from patgen.margins import Margins
-from patgen.dictionary import Dictionary, format_dictionary_word
+from patgen.dictionary import Dictionary, format_dictionary_word,\
+    format_word_as_pattern
 from patgen.project import Project
 from patgen.selector import Selector
 from patgen.range import Range
 from patgen.version import __version__
+from patgen.patternset import PatternSet
+from patgen.layer import Layer
 
 
 def main_new(args):
@@ -191,10 +194,18 @@ def main_test(args):
 
     print('Performance of', args.project, 'on', args.dictionary)
     do_test(project, dictionary)
+
     if args.errors:
         with codecs.open(args.errors, 'w', 'utf-8') as f:
             for word, hyphens, missed, false in project.patternset.errors(dictionary, project.margins):
                 f.write(format_dictionary_word(word, hyphens, missed, false) + '\n')
+        print('Saved errors to', args.errors)
+
+    if args.patterns:
+        with codecs.open(args.patterns, 'w', 'utf-8') as f:
+            for word, hyphens, missed, false in project.patternset.errors(dictionary, project.margins):
+                f.write(format_word_as_pattern(word, missed, false) + '\n')
+        print('Saved errors to', args.errors)
 
     print()
     return 0
@@ -264,6 +275,60 @@ def do_test(project, dictionary):
     return num_missed, num_false
 
 
+def main_import(args):
+    print('Loading patterns from', args.input, 'into project', args.project)
+    project = Project.load(args.project)
+    
+    if len(project.patternset) > 0:
+        print('ERROR: project already has some patterns. Can only load into empty project!')
+        return -1
+
+    patterns = {}
+    entered = False
+    with codecs.open(args.input, 'r', 'utf-8') as f:
+        for line in f:
+            line = line.strip()
+            line = line.split('%')[0]
+            if not line: 
+                continue
+            
+            if line == '\\patterns{':
+                entered = True
+            
+            elif entered and line == '}':
+                break
+            
+            elif entered:
+                text, control = PatternSet.parse_pattern(line)
+                patterns[text] = control
+    
+    if patterns:
+        print('WARNING: patterns file is empty!')
+
+        maxlevel = 0
+        for control in patterns.values():
+            for level in control.values():
+                maxlevel = max(maxlevel, level)
+    
+        patlen = max(len(text) for text in patterns.keys())
+    
+        for i in range(maxlevel):
+            project.patternset.append(Layer(Range(1, patlen+2), None, i & 2 == 1))
+    
+        for text, control in patterns.items():
+            project.patternset.set_pattern_control(text, control)
+
+    project.missed, project.false = do_test(project, project.dictionary)
+
+    if args.commit:
+        project.save(args.project)
+        print('...Committed')
+    else:
+        print('...Project NOT changed (use --commit flag to save changes)')
+    
+    print()
+    return 0
+
 def main():
     import argparse
     
@@ -302,6 +367,7 @@ def main():
     # "test" command
     parser_test = sub.add_parser('test', help='Test performance on a dictionary')
     parser_test.add_argument('dictionary', help='File name of a test dictionary')
+    parser_test.add_argument('-p', '--patterns', help='Optional file to write errors as patterns')
     parser_test.add_argument('-e', '--errors', help='Optional file to write errors (for error analysis)')
 
     # "swap" command
@@ -312,6 +378,11 @@ def main():
     # "compact" command
     parser_compact = sub.add_parser('compact', help='Removes redundancy from parterns')
     parser_compact.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
+
+    # "import" command
+    parser_import = sub.add_parser('import', help='Imports patterns from TeX file')
+    parser_import.add_argument('input', help='Name of the TeX patterns file')
+    parser_import.add_argument('-c', '--commit', default=False, action='store_true', help='If set, swapped projects are saved')
 
     if '-v' in sys.argv or '--version' in sys.argv:
         print('PYPATGEN version:', __version__)
@@ -336,6 +407,8 @@ def main():
         parser.exit(main_swap(args))
     elif args.cmd == 'compact':
         parser.exit(main_compact(args))
+    elif args.cmd == 'import':
+        parser.exit(main_import(args))
     else:
         parser.error('Command required')
 

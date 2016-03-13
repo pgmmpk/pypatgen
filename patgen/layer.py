@@ -74,7 +74,7 @@ class Layer:
         prediction = set()
     
         for chunklen in range(1, self.maxchunk+1):
-            for start in range(0, len(word) - chunklen):
+            for start in range(0, len(word) - chunklen + 1):
                 ch = word[start: start+chunklen]
                 allowed = self._data.get(ch, EMPTYSET)
                 for index in allowed:

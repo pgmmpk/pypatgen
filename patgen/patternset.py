@@ -3,7 +3,7 @@ Created on Mar 7, 2016
 
 @author: mike
 '''
-from patgen import EMPTYSET
+from patgen import EMPTYSET, DIGITS
 from patgen.suffix_array import SuffixArray
 
 
@@ -98,6 +98,19 @@ class PatternSet(list):
             if c > 0:
                 out.append(str(c))
         return ''.join(out)
+
+    @staticmethod
+    def parse_pattern(string):
+        text = []
+        control = {}
+        
+        for c in string:
+            if c in DIGITS:
+                control[len(text)] = int(c)
+            else:
+                text.append(c)
+
+        return ''.join(text), control
 
     def errors(self, dictionary, margins):
 

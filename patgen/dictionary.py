@@ -194,3 +194,18 @@ def format_dictionary_word(word, hyphens, missed=None, false=None, weights=None)
                 text.append(str(weights[i]))
 
     return ''.join(text)
+
+
+def format_word_as_pattern(word, missed=None, false=None):
+    text = []
+
+    for i in range(len(word) + 1):
+        if i > 0:
+            text.append(word[i-1])
+
+        if false is not None and i in false:
+            text.append('8')
+        elif missed is not None and i in missed:
+            text.append('7')
+
+    return '.' + ''.join(text) + '.'
