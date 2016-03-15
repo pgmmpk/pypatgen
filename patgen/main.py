@@ -370,8 +370,8 @@ def main():
     # "export" command
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
     parser_export.add_argument('output', help='Name of the TeX pattern file to create')
-    parser_test.add_argument('-p', '--patterns', help='Optional file to write raw hyphenation patterns')
-    parser_test.add_argument('-e', '--exceptions', help='Optional file to write raw exceptions')
+    parser_export.add_argument('-p', '--patterns', help='Optional file to write raw hyphenation patterns')
+    parser_export.add_argument('-e', '--exceptions', help='Optional file to write raw exceptions')
 
     # "hyphenate" command
     parser_hyphenate = sub.add_parser('hyphenate', help='Hyphenates a list of words')
