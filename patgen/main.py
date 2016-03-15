@@ -140,29 +140,41 @@ def main_export(args):
     
     project = Project.load(args.project)
 
-    num_patterns = 0
-    num_exceptions = 0
-    
+    pattern_strings = list(project.patternset.pattern_strings())
+    exceptions = list(project.patternset.errors(project.dictionary, project.margins))
+
     with codecs.open(args.output, 'w', 'utf-8') as f:
         f.write('\\patterns{\n')
-        for patt in project.patternset.pattern_strings():
+        for patt in pattern_strings:
             f.write(patt + '\n')
-            num_patterns += 1
         f.write('}\n')
         f.write('\\hyphenation{\n')
-        for word, _, _, _ in project.patternset.errors(project.dictionary, project.margins):
-            text = format_dictionary_word(word, project.dictionary[word])
+        for word, hyphens, _, _ in exceptions:
+            text = format_dictionary_word(word, hyphens)
             f.write(text + '\n')
-            num_exceptions += 1
         f.write('}\n')
     
     print('Created TeX patterns file', args.output)
-    print('Number of patterns:', num_patterns)
-    print('Number of exceptions:', num_exceptions)
+    print('Number of patterns:', len(pattern_strings))
+    print('Number of exceptions:', len(exceptions))
+
+    if args.patterns:
+        print()
+        with codecs.open(args.patterns, 'w', 'utf-8') as f:
+            for patt in pattern_strings:
+                f.write(patt + '\n')
+        print('Written raw patterns to', args.patterns)
+
+    if args.exceptions:
+        print()
+        with codecs.open(args.exceptions, 'w', 'utf-8') as f:
+            for word, hyphens, _, _ in exceptions:
+                text = format_dictionary_word(word, hyphens)
+                f.write(text + '\n')
+        print('Written raw exceptions to', args.exceptions)
 
     print()
     return 0
-
 
 def main_hyphenate(args):
     print('Hyphenating', args.input, 'into', args.output, 'using project', args.project)
@@ -358,6 +370,8 @@ def main():
     # "export" command
     parser_export = sub.add_parser('export', help='Exports project as a set of TeX patterns')
     parser_export.add_argument('output', help='Name of the TeX pattern file to create')
+    parser_test.add_argument('-p', '--patterns', help='Optional file to write raw hyphenation patterns')
+    parser_test.add_argument('-e', '--exceptions', help='Optional file to write raw exceptions')
 
     # "hyphenate" command
     parser_hyphenate = sub.add_parser('hyphenate', help='Hyphenates a list of words')
