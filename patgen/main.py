@@ -189,7 +189,7 @@ def main_hyphenate(args):
                 if not word:
                     continue
     
-                prediction = project.patterns.hyphenate(word, margins=project.margins) 
+                prediction = project.patternset.hyphenate(word, margins=project.margins) 
 
                 s = format_dictionary_word(word, prediction)
                 out.write(s + '\n')
@@ -197,6 +197,49 @@ def main_hyphenate(args):
     print()
     return 0
 
+
+def main_explain(args):
+    print('Explaining hyphenation of', args.input, 'into', args.output, 'using project', args.project)
+    
+    project = Project.load(args.project)
+
+    with codecs.open(args.input or sys.stdin.fileno(), 'r', 'utf-8') as f:
+        with codecs.open(args.output or sys.stdout.fileno(), 'w', 'utf-8') as out:
+            
+            for word in f:
+                word = word.strip()
+                if not word:
+                    continue
+    
+                explain = Explain()
+
+                prediction = project.patternset.hyphenate_explain(word, margins=project.margins, explain=explain) 
+
+                s = format_dictionary_word(word, prediction)
+                out.write(s + '\n')
+                out.write(s.encode('unicode-escape').decode('ascii') + '\n')
+                out.write(explain.format() + '\n\n')
+    
+    print()
+    return 0
+
+
+class Explain:
+    
+    def __init__(self):
+        self._line = []
+        self._strings = []
+    
+    def __call__(self, message):
+        self._line.append(message)
+    
+    def flush(self):
+        if self._line:
+            self._strings.append(' '.join(self._line))
+            self._line = []
+    
+    def format(self):
+        return '\n'.join(self._strings)
 
 def main_test(args):
     print('Testing', args.project, 'on dictionary', args.dictionary)
@@ -378,6 +421,11 @@ def main():
     parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
     parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
 
+    # "explain" command
+    parser_hyphenate = sub.add_parser('explain', help='Explains hyphenation for a list of words')
+    parser_hyphenate.add_argument('-i', '--input', default=None, help='Input file with word list - one word per line. If not given, reads stdin.')
+    parser_hyphenate.add_argument('-o', '--output', default=None, help='Output file with hyphenated words - one per line. If not given, writes to stdout.')
+
     # "test" command
     parser_test = sub.add_parser('test', help='Test performance on a dictionary')
     parser_test.add_argument('dictionary', help='File name of a test dictionary')
@@ -413,6 +461,8 @@ def main():
         parser.exit(main_export(args))
     elif args.cmd == 'hyphenate':
         parser.exit(main_hyphenate(args))
+    elif args.cmd == 'explain':
+        parser.exit(main_explain(args))
     elif args.cmd == 'batchtrain':
         parser.exit(main_batchtrain(args))
     elif args.cmd == 'test':

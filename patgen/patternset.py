@@ -32,6 +32,21 @@ class PatternSet(list):
         
         return prediction
     
+    def hyphenate_explain(self, word, margins, explain):
+        
+        prediction = set()
+        for i, layer in enumerate(self):
+            explain('layer %s' % (i+1))
+            if (i & 1) == 0:
+                # hyphenation layer
+                prediction.update(layer.predict_explain(word, margins, explain))
+            else:
+                # inhibiting layer
+                prediction.difference_update(layer.predict_explain(word, margins, explain))
+            explain.flush()
+        
+        return prediction
+
     def keys(self):
         keys = set()
         for layer in self:

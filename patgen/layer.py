@@ -83,6 +83,30 @@ class Layer:
     
         return prediction
 
+    def predict_explain(self, word, margins, explain):
+        '''
+        Applies a single pattern layer set to the word
+        
+        Result is the set of indices that patterset "suggested".
+        For hyphenation patternsets, these are indices where hyphenation is predicted.
+        For inhibiting patternsets, these are indices where hyphenation is inhibited.
+        '''
+        word = '.' + word + '.'
+    
+        prediction = set()
+    
+        for chunklen in range(1, self.maxchunk+1):
+            for start in range(0, len(word) - chunklen + 1):
+                ch = word[start: start+chunklen]
+                allowed = self._data.get(ch, EMPTYSET)
+                for index in allowed:
+                    if start + index > margins.left and start+index <= len(word) - 1 - margins.right:
+                        explain('pattern "%s" ("%s") hit offset %s' % (ch, ch.encode('unicode-escape').decode('ascii'), index+start-1))
+                        explain.flush()
+                        prediction.add(index + start - 1)  # -1 corrects for the added front padding
+    
+        return prediction
+
     def apply_to_dictionary(self, inhibiting, dictionary, margins):
         num_missed = 0
         num_false  = 0
