@@ -106,14 +106,13 @@ pypatgen words new  words.txt
 ```
    Note that we did not set hyphenation and therfore system inferred them from the dictionary. 
 Computed margins are (1, 1), because Church Slavonic allows hypenating after the first letter and just before the last letter.
-In other languages hyphenation margins are different. For example, English uses (2, 3) -- i.e. it never hyphenates after first letter, but can hyphenate 
-after two-letter prefix.
+In other languages hyphenation margins are different. For example, English uses (2, 3) -- i.e. it never hyphenates after first letter, but can hyphenate after two-letter prefix.
 
 3. Lets try finding good hyphenation patterns (this will be the first pattern set that we select). As a start, lets
 try patterns of length 1 and 2 only. And lets use selector "1:2:20". Remember, that this step does not
 update the project (unless we use `--commit` switch). So we can try different values and find the best.
    ```bash
-pypatgen words train -r 1,2 -s 1:2:20
+pypatgen words train -r 1-2 -s 1:2:20
 > Training hyphenation patterns (level=1)
 >     range of pattern lengths: 1..2
 >     selector: 1:2:20
@@ -126,7 +125,7 @@ pypatgen words train -r 1,2 -s 1:2:20
 
 4. Lets make selector somewhat stricter - to lessen the number of false hyphens: 
    ```bash
-pypatgen words train -r 1,2 -s 1:3:20
+pypatgen words train -r 1-2 -s 1:3:20
 > Training hyphenation patterns (level=1)
 >     range of pattern lengths: 1..2
 >     selector: 1:3:20
@@ -137,7 +136,7 @@ pypatgen words train -r 1,2 -s 1:3:20
 ```
    Now we covered 89% of hyphens and introduced 15% of false hyphenations. Still too many false hits and too few correct hits. Lets try longer patterns:
    ```bash
-pypatgen words train -r 1,3 -s 1:4:20
+pypatgen words train -r 1-3 -s 1:4:20
 Training hyphenation patterns (level=1)
 >     range of pattern lengths: 1..3
 >     selector: 1:4:20
@@ -149,7 +148,7 @@ Training hyphenation patterns (level=1)
 ```   
    Lets commit - this is pretty good for the first layer!
    ```bash
-pypatgen words train -r 1,3 -s 1:4:20 --commit
+pypatgen words train -r 1-3 -s 1:4:20 --commit
 > Training hyphenation patterns (level=1)
 >     range of pattern lengths: 1..3
 >     selector: 1:4:20
@@ -164,7 +163,7 @@ pypatgen words train -r 1,3 -s 1:4:20 --commit
 5. Now lets train the next level of patterns. Since this is the second (i.e. even) level, this will be
 inhibiting patterns. We want to supress those false positives. Lets try these parameters:
    ```bash
-pypatgen words train -r 1,3 -s 1:2:5 
+pypatgen words train -r 1-3 -s 1:2:5 
 > Training inhibiting patterns (level=2)
 >     range of pattern lengths: 1..3
 >     selector: 1:2:5
@@ -177,7 +176,7 @@ pypatgen words train -r 1,3 -s 1:2:5
 Hmm, we reduced the number of false hits drastically at a cost of just slightly lowering the number of true hits.
 Lets commit!
    ```bash
-pypatgen words train -r 1,3 -s 1:2:5 --commit 
+pypatgen words train -r 1-3 -s 1:2:5 --commit 
 > Training inhibiting patterns (level=2)
 >     range of pattern lengths: 1..3
 >     selector: 1:2:5
@@ -190,8 +189,8 @@ pypatgen words train -r 1,3 -s 1:2:5 --commit
 ```
 
 6. Lets find more hyphens:
-   ```
-pypatgen words train -r 1,3 -s 1:2:5 
+   ```bash
+pypatgen words train -r 1-3 -s 1:2:5 
 > Training hyphenation patterns (level=3)
 >     range of pattern lengths: 1..3
 >     selector: 1:2:5
@@ -202,8 +201,8 @@ pypatgen words train -r 1,3 -s 1:2:5
 > False (weighted): 755 (1.790%)
 ```
    Lets try longer patterns and commit:
-   ```
-pypatgen words train -r 1,4 -s 1:2:5 -c
+   ```bash
+pypatgen words train -r 1-4 -s 1:2:5 -c
 > Training hyphenation patterns (level=3)
 >     range of pattern lengths: 1..4
 >     selector: 1:2:5
@@ -219,7 +218,7 @@ pypatgen words train -r 1,4 -s 1:2:5 -c
 7. Now its time to clean up false hyphens. Lets allow for the longer patterns and use very relaxing selector. After some trial
    and error, commit these parameters:
    ```bash
-pypatgen words train -r 1,4 -s 1:1:2 -c
+pypatgen words train -r 1-4 -s 1:1:2 -c
 > Training inhibiting patterns (level=4)
 >     range of pattern lengths: 1..4
 >     selector: 1:1:2
@@ -234,7 +233,7 @@ pypatgen words train -r 1,4 -s 1:1:2 -c
 
 8. Still have about 250 of false predictions and about 1000 of missed hyphens. Lets train another two layers:
    ```bash
-pypatgen words train -r 1,5 -s 1:1:2 -c
+pypatgen words train -r 1-5 -s 1:1:2 -c
 > Training hyphenation patterns (level=5)
 >     range of pattern lengths: 1..5
 >     selector: 1:1:2
@@ -249,7 +248,7 @@ pypatgen words train -r 1,5 -s 1:1:2 -c
 ```
    and inhibiting layer:
    ```bash
-pypatgen words train -r 1,6 -s 1:1:1 -c
+pypatgen words train -r 1-6 -s 1:1:1 -c
 > Training inhibiting patterns (level=6)
 >     range of pattern lengths: 1..6
 >     selector: 1:1:1
@@ -266,7 +265,7 @@ pypatgen words train -r 1,6 -s 1:1:1 -c
    Wow! Only 26 false hyphens left and 348 hyphens missed. This already looks great, but lets train
    two more layers.
    ```bash
-pypatgen words train -r 1,6 -s 1:1:1 -c
+pypatgen words train -r 1-6 -s 1:1:1 -c
 > Training hyphenation patterns (level=7)
 >     range of pattern lengths: 1..6
 >     selector: 1:1:1
@@ -282,7 +281,7 @@ pypatgen words train -r 1,6 -s 1:1:1 -c
 ```
    and
    ```bash
-pypatgen words train -r 1,6 -s 1:1:1 -c
+pypatgen words train -r 1-6 -s 1:1:1 -c
 > Training inhibiting patterns (level=8)
 >     range of pattern lengths: 1..6
 >     selector: 1:1:1
